@@ -109,6 +109,27 @@ BASE_FEATURES = datasets.Features(
         "image": datasets.Image(),  # PIL.open(),
     }
 )
+
+# coco cat info
+COCO_CAT_ID_OFFSET = 1
+COCO_CAT = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'street sign', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'hat', 'backpack', 'umbrella', 'shoe', 'eye glasses', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 'bottle', 'plate', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'mirror', 'dining table', 'window', 'desk', 'toilet', 'door', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'blender', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush', 'hair brush']
+
+# guesswhat cat info
+GW_ANS_CAT = ['Yes', 'No', 'N/A']
+
+ANSWER_FEATURE = datasets.ClassLabel(num_classes=len(GW_ANS_CAT), names=GW_ANS_CAT)
+COCO_OBJ_CAT_FEATURE = datasets.ClassLabel(num_classes=len(COCO_CAT), names=COCO_CAT)
+
+ORACLE_FEATURES = datasets.Features(
+                {
+                    "image": datasets.Image(),
+                    "question_id": datasets.Value("string"),
+                    "question": datasets.Value("string"),
+                    "answer": ANSWER_FEATURE,
+                    "category": COCO_OBJ_CAT_FEATURE,
+                    "bbox": datasets.Sequence(datasets.Value("float32"))
+                }
+)
 # License: Creative Commons Attribution 4.0 International License
 '''
 {
@@ -155,14 +176,12 @@ class GuessWhatConfig(datasets.BuilderConfig):
         self,
         data_urls=BASE_URLS,
         citation=_CITATION,
+        features=BASE_FEATURES,
     **kwargs):
         super(GuessWhatConfig, self).__init__(**kwargs)
         self.data_urls = data_urls
         self.citation = citation
-    
-    @property
-    def features(self):
-        return BASE_FEATURES
+        self.features = features
 
 class GuessWhat(datasets.GeneratorBasedBuilder):
     """VGDetection"""
@@ -172,11 +191,19 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
             citation=_CITATION,
             name="base",
             version=_VERSION,
+            features=BASE_FEATURES
+        ),
+        GuessWhatConfig(
+            data_urls=BASE_URLS,
+            citation=_CITATION,
+            name="oracle",
+            version=_VERSION,
+            features=ORACLE_FEATURES
         ),
     ]
 
     BUILDER_CONFIG_CLASS = GuessWhatConfig
-    DEFAULT_CONFIG_NAME = "base"
+    DEFAULT_CONFIG_NAME = "oracle"
 
     def _info(self):
         return datasets.DatasetInfo(
@@ -218,6 +245,53 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
     def _generate_examples(self, **kwargs):
         # print(kwargs)  # {'extracted_files': ['huggingface_datasets/downloads/extracted/718d812f30c3d20077b27710c12e9f0d454ca604160df4bec861f77e51b8de1f', 'huggingface_datasets/downloads/extracted/f43997a6b702c171736e1483130b42a1020f67a32525a867b9b3129642d1daa3', 'huggingface_datasets/downloads/extracted/5ad45e7951d03e24a8252b2cbac7382000a0b4a80f921ae2a7c520adde784938']}
         """Yields examples."""
+        # base
+        returned_idx = 0
+        with open(kwargs['extracted_files'][0], "r", encoding="utf-8") as f:
+            # print(f)
+            for idx, line in enumerate(f):
+                item = json.loads(line)
+                # print(loaded_line)
+                for new_idx, qas in enumerate(item['qas']):
+                    file_name = item["picture"]["file_name"]  # COCO_val2014_*.jpg or COCO_train2014_*.jpg
+                    folder_name = glob.glob(kwargs['extracted_files'][1]+"/*")[0] if 'train' in file_name else glob.glob(kwargs['extracted_files'][2]+"/*")[0]
+                    bbox = item["objects"][str(item["object_id"])]["bbox"]
+                    w, h = item["picture"]["width"], item["picture"]["height"]
+                    new_bbox = [bbox[0]/w, bbox[1]/h, bbox[2]/w, bbox[3]/h]
+                    new_item = {
+                        "image": os.path.join(folder_name, file_name),
+                        "question_id": qas["id"],
+                        "question": qas["q"],
+                        "answer": qas["a"],
+                        "category": item["objects"][str(item["object_id"])]["category"],
+                        "bbox": new_bbox,
+                    }
+                    yield returned_idx, new_item
+                    returned_idx += 1             
+
+
+
+if __name__ == "__main__":
+    from datasets import load_dataset
+
+    raw_datasets = load_dataset(
+        "guesswhat.py",
+        "oracle",
+        cache_dir="huggingface_datasets",
+        data_dir="data",
+        ignore_verifications=True,
+        )
+    dataset_train = raw_datasets["train"]
+
+    for item in dataset_train:
+        print(item)
+        exit()
+
+
+"""
+    def _generate_examples(self, **kwargs):
+        # print(kwargs)  # {'extracted_files': ['huggingface_datasets/downloads/extracted/718d812f30c3d20077b27710c12e9f0d454ca604160df4bec861f77e51b8de1f', 'huggingface_datasets/downloads/extracted/f43997a6b702c171736e1483130b42a1020f67a32525a867b9b3129642d1daa3', 'huggingface_datasets/downloads/extracted/5ad45e7951d03e24a8252b2cbac7382000a0b4a80f921ae2a7c520adde784938']}
+        # base
         with open(kwargs['extracted_files'][0], "r", encoding="utf-8") as f:
             # print(f)
             for idx, line in enumerate(f):
@@ -233,21 +307,4 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
                 # item["image"] = Image.open(os.path.join(folder_name, file_name)).convert("RGB")
                 item["image"] = os.path.join(folder_name, file_name)
                 yield idx, item
-
-
-
-if __name__ == "__main__":
-    from datasets import load_dataset
-
-    raw_datasets = load_dataset(
-        "guesswhat.py",
-        "base",
-        cache_dir="huggingface_datasets",
-        data_dir="data",
-        ignore_verifications=True,
-        )
-    dataset_train = raw_datasets["train"]
-
-    for item in dataset_train:
-        print(item)
-        exit()
+"""
