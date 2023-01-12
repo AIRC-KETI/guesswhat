@@ -184,7 +184,7 @@ def parse_args():
         help="Total number of training steps to perform. If provided, overrides num_train_epochs.",
     )
     parser.add_argument(
-        "--num_train_epochs", type=int, default=1,
+        "--num_train_epochs", type=int, default=5,
         help="Total number of training epochs to perform.")
 
     # checkpoint
@@ -208,7 +208,7 @@ def parse_args():
         help="Whether to enable experiment trackers for logging.",
     )
     parser.add_argument(
-        "--checkpointing_steps", type=str, default=None,
+        "--checkpointing_steps", type=str, default='epoch',
         help="Whether the various states should be saved at the end of every n steps, or 'epoch' for each epoch.",
     )
     parser.add_argument(
@@ -229,7 +229,7 @@ def parse_args():
 
     # logging
     parser.add_argument(
-        "--output_dir", type=str, default=None,
+        "--output_dir", type=str, default='oracle_results',
         help="Where to store the final model."
     )
     args = parser.parse_args()
