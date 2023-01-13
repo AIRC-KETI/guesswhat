@@ -211,18 +211,51 @@ class OracleModel(PreTrainedModel):
         for param in self.vision_text_model.parameters():
             param.requires_grad = False
     
-    def _build_our_attention_mask(self, input_ids, attention_mask, bbox):
+    def _build_our_attention_mask(self, input_ids, attention_mask, bbox, name='restricted'):
         # lazily create causal attention mask, with full attention between the vision tokens
         # pytorch uses additive attention mask; fill with -inf
         bsz, seq_len, _ = input_ids.size()
         class_mask = torch.ones(bsz, 1, device=input_ids.device)
         img_mask = self.bbox2_mask(bbox, self.image_seq_len).view(bsz, -1)  # [B, sqrt * sqrt]
-
-        attention_mask = torch.cat((class_mask, img_mask, attention_mask), -1).unsqueeze(-1).expand(-1, -1, seq_len,).unsqueeze(1)  # [B, seq, seq]
-        # torchvision.utils.save_image(attention_mask[0], "attention_mask_0.jpg", normalize=True)
-        # torchvision.utils.save_image(attention_mask[1], "attention_mask_1.jpg", normalize=True)
-        maxval = torch.tensor(torch.finfo(input_ids.dtype).max)
-        return attention_mask*maxval - maxval + 1.
+        if 'restricted' in name:
+            returned_attention_mask = torch.cat((class_mask, img_mask, attention_mask), -1).unsqueeze(-1).expand(-1, -1, seq_len,).unsqueeze(1)  # [B, seq, seq]
+            # torchvision.utils.save_image(attention_mask[0], "attention_mask_0.jpg", normalize=True)
+            # torchvision.utils.save_image(attention_mask[1], "attention_mask_1.jpg", normalize=True)
+            maxval = torch.tensor(torch.finfo(input_ids.dtype).max)
+            return returned_attention_mask*maxval - maxval + 1.
+        elif 'semi' in name:
+            semi_attention_mask = torch.ones(bsz, seq_len, seq_len-self.image_seq_len-1, device=input_ids.device)  # [B, seq_len, seq_len - self.image_seq_len]
+            returned_attention_mask = torch.cat(
+                (torch.cat((class_mask, img_mask, attention_mask), -1).unsqueeze(-1).expand(-1, -1, self.image_seq_len + 1,),
+                semi_attention_mask), -1
+                ).unsqueeze(1)  # [B, seq_len] -> [B, seq_len, 1] -> [B, seq_len, self.image_seq_len + 1(class)] -> [B, seq_len, self.image_seq_len + 1 + seq_len - self.image_seq_len-1] -> [B, seq_len, seq_len]
+            # torchvision.utils.save_image(attention_mask[0], "attention_mask_0.jpg", normalize=True)
+            # torchvision.utils.save_image(attention_mask[1], "attention_mask_1.jpg", normalize=True)
+            maxval = torch.tensor(torch.finfo(input_ids.dtype).max)
+            return returned_attention_mask*maxval - maxval + 1.
+        else:
+            whole_mask = torch.ones(bsz, self.image_seq_len, self.image_seq_len, device=input_ids.device)
+            reversed_mask = 1.-img_mask
+            else_img_mask = whole_mask - img_mask.unsqueeze(-1) * reversed_mask.unsqueeze(-2) + img_mask.unsqueeze(-1) * img_mask.unsqueeze(-2)  # [B, sqrt*sqrt, sqrt*sqrt]
+            additional_class_mask = class_mask.expand(-1, seq_len-1)
+            additional_text_mask = 0.
+            returned_attention_mask = torch.cat((
+                    torch.cat((
+                        class_mask,
+                        img_mask,
+                        attention_mask
+                    ), -1),
+                    torch.cat((
+                        additional_class_mask[:,:self.image_seq_len*self.image_seq_len-1],
+                        else_img_mask,
+                        attention_mask.unsqeeze(-1).expand(-1, -1, self.image_seq_len * self.image_seq_len)
+                    ), -1),
+                    torch.cat((
+                        additional_class_mask[:,self.image_seq_len*self.image_seq_len]
+                    ), -1)
+                )
+            )
+            return None
     
     def bbox2_mask(self, bbox, sqrt_img_seq_len):  # [B, head, query, key]   --> [B, head, inp_seq_len, 1]
         x1 = torch.floor(bbox[:,0] * sqrt_img_seq_len).unsqueeze(-1)
