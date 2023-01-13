@@ -282,12 +282,22 @@ if __name__ == "__main__":
         ignore_verifications=True,
         )
     dataset_train = raw_datasets["train"]
-
-    for item in dataset_train:
-        print(item)
-        exit()
-
-
+    ratio = [0, 0, 0]
+    '''
+    with open("textfile.txt", "w") as file:
+        for idx, item in enumerate(dataset_train):
+            for k, v in item.items():
+                file.write(f"{str(k)}, {str(v)}")
+                file.write("\n")
+            if idx >= 100:
+                exit()
+    '''
+    with open("ratio.txt", "w") as file:
+        for idx, item in enumerate(dataset_train):
+            for k, v in item.items():
+                if "answer" in str(k):
+                    ratio[int(item[str(k)])] += 1
+        file.write(ratio)
 """
     def _generate_examples(self, **kwargs):
         # print(kwargs)  # {'extracted_files': ['huggingface_datasets/downloads/extracted/718d812f30c3d20077b27710c12e9f0d454ca604160df4bec861f77e51b8de1f', 'huggingface_datasets/downloads/extracted/f43997a6b702c171736e1483130b42a1020f67a32525a867b9b3129642d1daa3', 'huggingface_datasets/downloads/extracted/5ad45e7951d03e24a8252b2cbac7382000a0b4a80f921ae2a7c520adde784938']}

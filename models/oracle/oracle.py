@@ -209,6 +209,7 @@ class OracleModel(PreTrainedModel):
 
     def freeze_clip(self):
         for param in self.vision_text_model.parameters():
+            print(param)
             param.requires_grad = False
     
     def _build_our_attention_mask(self, input_ids, attention_mask, bbox, name='restricted'):

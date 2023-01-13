@@ -208,7 +208,7 @@ def parse_args():
         help="Whether to enable experiment trackers for logging.",
     )
     parser.add_argument(
-        "--checkpointing_steps", type=str, default='epoch',
+        "--checkpointing_steps", type=str, default=100,
         help="Whether the various states should be saved at the end of every n steps, or 'epoch' for each epoch.",
     )
     parser.add_argument(
@@ -229,7 +229,7 @@ def parse_args():
 
     # logging
     parser.add_argument(
-        "--output_dir", type=str, default='oracle_results',
+        "--output_dir", type=str, default='light_oracle_results',
         help="Where to store the final model."
     )
     args = parser.parse_args()
@@ -541,6 +541,9 @@ def main():
 
             if completed_steps >= args.max_train_steps:
                 break
+            
+            if completed_steps % 100 == 0 and args.with_tracking:
+                print(f"loss: {loss}\n")
 
         model.eval()
         samples_seen = 0
