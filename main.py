@@ -208,7 +208,7 @@ def parse_args():
         help="Whether to enable experiment trackers for logging.",
     )
     parser.add_argument(
-        "--checkpointing_steps", type=str, default=100,
+        "--checkpointing_steps", type=str, default='epoch',
         help="Whether the various states should be saved at the end of every n steps, or 'epoch' for each epoch.",
     )
     parser.add_argument(
@@ -223,7 +223,7 @@ def parse_args():
         "--warmup_portion", type=float, default=0, help="Portion of total training steps for the warmup in the lr scheduler."
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=8e-4,
+        "--learning_rate", type=float, default=2e-3,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
 
@@ -504,7 +504,7 @@ def main():
             for _ in range(num_update_steps_per_epoch*starting_epoch):
                 progress_bar.update(1)
 
-
+    step_loss = 0
     for epoch in range(starting_epoch, args.num_train_epochs):
         model.train()
         if args.with_tracking:
@@ -542,9 +542,9 @@ def main():
             if completed_steps >= args.max_train_steps:
                 break
             
-            if completed_steps % 100 == 0 and args.with_tracking:
-                print(f"loss: {loss}\n")
-
+            if step % 100 == 0:
+                print(f"loss: {loss}")
+        
         model.eval()
         samples_seen = 0
         for step, batch in enumerate(eval_dataloader):
@@ -563,7 +563,8 @@ def main():
                 predictions=predictions,
                 references=references,
             )
-
+            if step >= 10:
+                break
         eval_metric = metric.compute()
         logger.info(f"epoch {epoch}: {eval_metric}")
 

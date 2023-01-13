@@ -1,0 +1,606 @@
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x360 at 0x7FEA2EBBAC70>
+question_id, 4967
+question, Is it a person?
+answer, 0
+category, 0
+bbox, [0.503250002861023, 0.41544443368911743, 0.15581250190734863, 0.4830000102519989]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x360 at 0x7FEA2D9CE520>
+question_id, 4969
+question, Is the person a boy?
+answer, 0
+category, 0
+bbox, [0.503250002861023, 0.41544443368911743, 0.15581250190734863, 0.4830000102519989]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=375x500 at 0x7FEAADEBF700>
+question_id, 4968
+question, is it a person?
+answer, 0
+category, 0
+bbox, [0.0029866667464375496, 0.07639999687671661, 0.9018933176994324, 0.9123600125312805]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=375x500 at 0x7FEA2D9CE520>
+question_id, 4971
+question, in the foreground?
+answer, 0
+category, 0
+bbox, [0.0029866667464375496, 0.07639999687671661, 0.9018933176994324, 0.9123600125312805]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x375 at 0x7FEAADEBF550>
+question_id, 4973
+question, is it furniture?
+answer, 1
+category, 50
+bbox, [0.06533999741077423, 0.5580800175666809, 0.061420001089572906, 0.03330666571855545]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x375 at 0x7FEA2D9CE520>
+question_id, 4982
+question, is it white?
+answer, 1
+category, 50
+bbox, [0.06533999741077423, 0.5580800175666809, 0.061420001089572906, 0.03330666571855545]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x375 at 0x7FEAADEBF790>
+question_id, 4991
+question, is it on the wall?
+answer, 1
+category, 50
+bbox, [0.06533999741077423, 0.5580800175666809, 0.061420001089572906, 0.03330666571855545]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x375 at 0x7FEA2D9CE520>
+question_id, 4995
+question, is it on the ground?
+answer, 1
+category, 50
+bbox, [0.06533999741077423, 0.5580800175666809, 0.061420001089572906, 0.03330666571855545]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x375 at 0x7FEAADEBF850>
+question_id, 5000
+question, is it light up?
+answer, 1
+category, 50
+bbox, [0.06533999741077423, 0.5580800175666809, 0.061420001089572906, 0.03330666571855545]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x375 at 0x7FEA2D9CE520>
+question_id, 5008
+question, is it on the table?
+answer, 0
+category, 50
+bbox, [0.06533999741077423, 0.5580800175666809, 0.061420001089572906, 0.03330666571855545]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x375 at 0x7FEAADEBF7C0>
+question_id, 5020
+question, is it on the close table?
+answer, 1
+category, 50
+bbox, [0.06533999741077423, 0.5580800175666809, 0.061420001089572906, 0.03330666571855545]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x375 at 0x7FEA2D9CE520>
+question_id, 5037
+question, is it on the left on the far table?
+answer, 0
+category, 50
+bbox, [0.06533999741077423, 0.5580800175666809, 0.061420001089572906, 0.03330666571855545]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEAADEBF910>
+question_id, 4983
+question, Is it in the foreground?
+answer, 0
+category, 7
+bbox, [0.5185156464576721, 0.7400624752044678, 0.2604062557220459, 0.08841666579246521]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE520>
+question_id, 4996
+question, Does it have wings?
+answer, 1
+category, 7
+bbox, [0.5185156464576721, 0.7400624752044678, 0.2604062557220459, 0.08841666579246521]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEAADEBFA90>
+question_id, 5006
+question, Is it a person?
+answer, 1
+category, 7
+bbox, [0.5185156464576721, 0.7400624752044678, 0.2604062557220459, 0.08841666579246521]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE520>
+question_id, 5017
+question, Is it a vehicle?
+answer, 0
+category, 7
+bbox, [0.5185156464576721, 0.7400624752044678, 0.2604062557220459, 0.08841666579246521]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEAADEBFA30>
+question_id, 4977
+question, is it an appliance?
+answer, 1
+category, 43
+bbox, [0.34706249833106995, 0.005354166496545076, 0.019187500700354576, 0.038229167461395264]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE520>
+question_id, 4981
+question, is it on the counter?
+answer, 0
+category, 43
+bbox, [0.34706249833106995, 0.005354166496545076, 0.019187500700354576, 0.038229167461395264]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEAADEBF8B0>
+question_id, 4985
+question, is it a spice?
+answer, 0
+category, 43
+bbox, [0.34706249833106995, 0.005354166496545076, 0.019187500700354576, 0.038229167461395264]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE520>
+question_id, 4993
+question, does the container have a picture?
+answer, 1
+category, 43
+bbox, [0.34706249833106995, 0.005354166496545076, 0.019187500700354576, 0.038229167461395264]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEAADEBF9D0>
+question_id, 4999
+question, Does the container have a red top?
+answer, 1
+category, 43
+bbox, [0.34706249833106995, 0.005354166496545076, 0.019187500700354576, 0.038229167461395264]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE520>
+question_id, 5009
+question, is it red white and blue?
+answer, 1
+category, 43
+bbox, [0.34706249833106995, 0.005354166496545076, 0.019187500700354576, 0.038229167461395264]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEAADEBF970>
+question_id, 5018
+question, is it on the spice carousel?
+answer, 0
+category, 43
+bbox, [0.34706249833106995, 0.005354166496545076, 0.019187500700354576, 0.038229167461395264]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x539 at 0x7FEA2D9CE520>
+question_id, 5023
+question, is it food?
+answer, 0
+category, 51
+bbox, [0.03567187488079071, 0.0, 0.7688593864440918, 0.8188311457633972]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x539 at 0x7FEAADEBF9A0>
+question_id, 5031
+question, is it fruit?
+answer, 0
+category, 51
+bbox, [0.03567187488079071, 0.0, 0.7688593864440918, 0.8188311457633972]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x539 at 0x7FEA2D9CE520>
+question_id, 5041
+question, how many fruits?
+answer, 2
+category, 51
+bbox, [0.03567187488079071, 0.0, 0.7688593864440918, 0.8188311457633972]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x539 at 0x7FEAADEBFB50>
+question_id, 5049
+question, is there just one fruit?
+answer, 0
+category, 51
+bbox, [0.03567187488079071, 0.0, 0.7688593864440918, 0.8188311457633972]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE520>
+question_id, 5027
+question, Is it a person?
+answer, 0
+category, 0
+bbox, [0.11993750184774399, 0.4584309160709381, 0.11845312267541885, 0.4898829162120819]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEAADEBFB20>
+question_id, 5036
+question, Is the person male?
+answer, 1
+category, 0
+bbox, [0.11993750184774399, 0.4584309160709381, 0.11845312267541885, 0.4898829162120819]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE520>
+question_id, 5029
+question, is it living?
+answer, 1
+category, 62
+bbox, [0.0, 0.0, 0.9635937213897705, 0.9552291631698608]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEAADEBFC40>
+question_id, 5039
+question, is it electronic?
+answer, 1
+category, 62
+bbox, [0.0, 0.0, 0.9635937213897705, 0.9552291631698608]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE520>
+question_id, 5042
+question, is it soft?
+answer, 0
+category, 62
+bbox, [0.0, 0.0, 0.9635937213897705, 0.9552291631698608]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEAADEBFBE0>
+question_id, 5045
+question, is it blue?
+answer, 0
+category, 62
+bbox, [0.0, 0.0, 0.9635937213897705, 0.9552291631698608]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=479x640 at 0x7FEA2D9CE520>
+question_id, 5038
+question, Is it in the mirror?
+answer, 1
+category, 0
+bbox, [0.17252609133720398, 0.040812499821186066, 0.046012524515390396, 0.03831249848008156]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=479x640 at 0x7FEAADEBFCD0>
+question_id, 5050
+question, Is it in the background?
+answer, 0
+category, 0
+bbox, [0.17252609133720398, 0.040812499821186066, 0.046012524515390396, 0.03831249848008156]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=479x640 at 0x7FEA2D9CE520>
+question_id, 5056
+question, Is it a vehicle?
+answer, 1
+category, 0
+bbox, [0.17252609133720398, 0.040812499821186066, 0.046012524515390396, 0.03831249848008156]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=479x640 at 0x7FEAADEBFD00>
+question_id, 5073
+question, Is it a plant?
+answer, 1
+category, 0
+bbox, [0.17252609133720398, 0.040812499821186066, 0.046012524515390396, 0.03831249848008156]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=479x640 at 0x7FEA2D9CE520>
+question_id, 5089
+question, Is it white?
+answer, 1
+category, 0
+bbox, [0.17252609133720398, 0.040812499821186066, 0.046012524515390396, 0.03831249848008156]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=479x640 at 0x7FEAADEBF700>
+question_id, 5110
+question, Is it a sign?
+answer, 1
+category, 0
+bbox, [0.17252609133720398, 0.040812499821186066, 0.046012524515390396, 0.03831249848008156]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=479x640 at 0x7FEA2D9CE520>
+question_id, 5140
+question, Is it a building?
+answer, 1
+category, 0
+bbox, [0.17252609133720398, 0.040812499821186066, 0.046012524515390396, 0.03831249848008156]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=479x640 at 0x7FEAADEBF550>
+question_id, 5179
+question, Is it a person?
+answer, 0
+category, 0
+bbox, [0.17252609133720398, 0.040812499821186066, 0.046012524515390396, 0.03831249848008156]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=419x637 at 0x7FEA2D9CE520>
+question_id, 5052
+question, is it food?
+answer, 0
+category, 58
+bbox, [0.048544153571128845, 0.6699057817459106, 0.6243436932563782, 0.26835164427757263]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x400 at 0x7FEAADEBF790>
+question_id, 5063
+question, is it on the back coutertop?
+answer, 1
+category, 78
+bbox, [0.7892199754714966, 0.4786500036716461, 0.21077999472618103, 0.5056250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x400 at 0x7FEA2D9CE520>
+question_id, 5072
+question, is it on the island?
+answer, 1
+category, 78
+bbox, [0.7892199754714966, 0.4786500036716461, 0.21077999472618103, 0.5056250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x400 at 0x7FEAADEBF850>
+question_id, 5085
+question, is it on the walls?
+answer, 1
+category, 78
+bbox, [0.7892199754714966, 0.4786500036716461, 0.21077999472618103, 0.5056250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x400 at 0x7FEA2D9CE520>
+question_id, 5097
+question, is it in the cabinets?
+answer, 1
+category, 78
+bbox, [0.7892199754714966, 0.4786500036716461, 0.21077999472618103, 0.5056250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x400 at 0x7FEAADEBFCA0>
+question_id, 5107
+question, is it a human?
+answer, 1
+category, 78
+bbox, [0.7892199754714966, 0.4786500036716461, 0.21077999472618103, 0.5056250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x400 at 0x7FEA2D9CE520>
+question_id, 5121
+question, is it on the windowsill?
+answer, 1
+category, 78
+bbox, [0.7892199754714966, 0.4786500036716461, 0.21077999472618103, 0.5056250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x400 at 0x7FEAADEBF7C0>
+question_id, 5134
+question, is it an appliance?
+answer, 0
+category, 78
+bbox, [0.7892199754714966, 0.4786500036716461, 0.21077999472618103, 0.5056250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x400 at 0x7FEA2D9CE520>
+question_id, 5139
+question, does it cook things?
+answer, 0
+category, 78
+bbox, [0.7892199754714966, 0.4786500036716461, 0.21077999472618103, 0.5056250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEAADEBF910>
+question_id, 5082
+question, Is it an appliance?
+answer, 0
+category, 78
+bbox, [0.09606249630451202, 0.0022499999031424522, 0.6606718897819519, 0.979770839214325]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE520>
+question_id, 5103
+question, It is a stove?
+answer, 0
+category, 78
+bbox, [0.09606249630451202, 0.0022499999031424522, 0.6606718897819519, 0.979770839214325]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x555 at 0x7FEAADEBFA90>
+question_id, 5081
+question, Is it edible?
+answer, 1
+category, 50
+bbox, [0.0, 0.3752792775630951, 0.08379687368869781, 0.1393333375453949]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x555 at 0x7FEA2D9CE9A0>
+question_id, 5084
+question, is it flowers?
+answer, 1
+category, 50
+bbox, [0.0, 0.3752792775630951, 0.08379687368869781, 0.1393333375453949]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x555 at 0x7FEA2D9CE820>
+question_id, 5092
+question, is it a knife?
+answer, 1
+category, 50
+bbox, [0.0, 0.3752792775630951, 0.08379687368869781, 0.1393333375453949]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x555 at 0x7FEA2D9CE9A0>
+question_id, 5096
+question, is it a doll?
+answer, 1
+category, 50
+bbox, [0.0, 0.3752792775630951, 0.08379687368869781, 0.1393333375453949]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x555 at 0x7FEA2D9CE820>
+question_id, 5100
+question, is it a table?
+answer, 1
+category, 50
+bbox, [0.0, 0.3752792775630951, 0.08379687368869781, 0.1393333375453949]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x555 at 0x7FEA2D9CE9A0>
+question_id, 5104
+question, is it blue?
+answer, 1
+category, 50
+bbox, [0.0, 0.3752792775630951, 0.08379687368869781, 0.1393333375453949]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x555 at 0x7FEA2D9CE820>
+question_id, 5109
+question, is it white?
+answer, 0
+category, 50
+bbox, [0.0, 0.3752792775630951, 0.08379687368869781, 0.1393333375453949]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x555 at 0x7FEA2D9CE9A0>
+question_id, 5113
+question, is it round?
+answer, 0
+category, 50
+bbox, [0.0, 0.3752792775630951, 0.08379687368869781, 0.1393333375453949]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE820>
+question_id, 5087
+question, Is it a dish?
+answer, 1
+category, 53
+bbox, [0.23817187547683716, 0.1081041693687439, 0.6908749938011169, 0.8806250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE9A0>
+question_id, 5108
+question, Is it a food?
+answer, 0
+category, 53
+bbox, [0.23817187547683716, 0.1081041693687439, 0.6908749938011169, 0.8806250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE820>
+question_id, 5117
+question, Is it a vegetable?
+answer, 1
+category, 53
+bbox, [0.23817187547683716, 0.1081041693687439, 0.6908749938011169, 0.8806250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE9A0>
+question_id, 5133
+question, Is it a meat?
+answer, 0
+category, 53
+bbox, [0.23817187547683716, 0.1081041693687439, 0.6908749938011169, 0.8806250095367432]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE820>
+question_id, 5083
+question, is it a horse?
+answer, 1
+category, 0
+bbox, [0.324281245470047, 0.1431458294391632, 0.025562500581145287, 0.05577083304524422]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE9A0>
+question_id, 5093
+question, is it a person?
+answer, 0
+category, 0
+bbox, [0.324281245470047, 0.1431458294391632, 0.025562500581145287, 0.05577083304524422]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE820>
+question_id, 5105
+question, is it the driver?
+answer, 1
+category, 0
+bbox, [0.324281245470047, 0.1431458294391632, 0.025562500581145287, 0.05577083304524422]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE9A0>
+question_id, 5116
+question, is it a reflection?
+answer, 0
+category, 0
+bbox, [0.324281245470047, 0.1431458294391632, 0.025562500581145287, 0.05577083304524422]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE820>
+question_id, 5126
+question, Is it on the floor?
+answer, 1
+category, 50
+bbox, [0.4124999940395355, 0.23836065828800201, 0.05870312452316284, 0.046416860073804855]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE9A0>
+question_id, 5142
+question, Is it on the table?
+answer, 1
+category, 50
+bbox, [0.4124999940395355, 0.23836065828800201, 0.05870312452316284, 0.046416860073804855]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE820>
+question_id, 5161
+question, Hanging on the wall?
+answer, 1
+category, 50
+bbox, [0.4124999940395355, 0.23836065828800201, 0.05870312452316284, 0.046416860073804855]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE9A0>
+question_id, 5192
+question, Is it wood?
+answer, 1
+category, 50
+bbox, [0.4124999940395355, 0.23836065828800201, 0.05870312452316284, 0.046416860073804855]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE820>
+question_id, 5210
+question, Located in a corner?
+answer, 1
+category, 50
+bbox, [0.4124999940395355, 0.23836065828800201, 0.05870312452316284, 0.046416860073804855]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE9A0>
+question_id, 5120
+question, Is it a person?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE820>
+question_id, 5137
+question, Is it an object?
+answer, 0
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE9A0>
+question_id, 5145
+question, Is it made of metal?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE820>
+question_id, 5159
+question, Is it white?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE9A0>
+question_id, 5174
+question, Is it black?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE820>
+question_id, 5194
+question, Is it a article of clothing?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE9A0>
+question_id, 5212
+question, Is it dirt?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE820>
+question_id, 5228
+question, Is it maroon?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE9A0>
+question_id, 5241
+question, Is it a bat?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE820>
+question_id, 5270
+question, Is it green?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE9A0>
+question_id, 5285
+question, Is it striped?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE820>
+question_id, 5306
+question, is it large?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE9A0>
+question_id, 5316
+question, is it small?
+answer, 0
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE820>
+question_id, 5334
+question, is it shoes?
+answer, 1
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE9A0>
+question_id, 5343
+question, is it gloves?
+answer, 0
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=426x640 at 0x7FEA2D9CE820>
+question_id, 5355
+question, is it a baseball glove?
+answer, 0
+category, 39
+bbox, [0.5958450436592102, 0.5466718673706055, 0.11840375512838364, 0.08087500184774399]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE9A0>
+question_id, 5127
+question, is it an appliance?
+answer, 0
+category, 81
+bbox, [0.06220312416553497, 0.25070834159851074, 0.49989062547683716, 0.7492916584014893]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE820>
+question_id, 5135
+question, is it white?
+answer, 0
+category, 81
+bbox, [0.06220312416553497, 0.25070834159851074, 0.49989062547683716, 0.7492916584014893]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x480 at 0x7FEA2D9CE9A0>
+question_id, 5146
+question, does it have two compartments?
+answer, 0
+category, 81
+bbox, [0.06220312416553497, 0.25070834159851074, 0.49989062547683716, 0.7492916584014893]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=425x640 at 0x7FEA2D9CE820>
+question_id, 5125
+question, is it a person?
+answer, 0
+category, 0
+bbox, [0.35216471552848816, 0.054093748331069946, 0.12312941253185272, 0.11767187714576721]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=425x640 at 0x7FEA2D9CE9A0>
+question_id, 5131
+question, is it on the elephant?
+answer, 0
+category, 0
+bbox, [0.35216471552848816, 0.054093748331069946, 0.12312941253185272, 0.11767187714576721]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=425x640 at 0x7FEA2D9CE820>
+question_id, 5138
+question, are they wearing red?
+answer, 1
+category, 0
+bbox, [0.35216471552848816, 0.054093748331069946, 0.12312941253185272, 0.11767187714576721]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=425x640 at 0x7FEA2D9CE9A0>
+question_id, 5147
+question, are they wearing a black hat?
+answer, 1
+category, 0
+bbox, [0.35216471552848816, 0.054093748331069946, 0.12312941253185272, 0.11767187714576721]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=425x640 at 0x7FEA2D9CE820>
+question_id, 5151
+question, are they in the front?
+answer, 1
+category, 0
+bbox, [0.35216471552848816, 0.054093748331069946, 0.12312941253185272, 0.11767187714576721]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE9A0>
+question_id, 5144
+question, is it a child?
+answer, 1
+category, 50
+bbox, [0.01379687525331974, 0.37812647223472595, 0.06528124958276749, 0.042131148278713226]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE820>
+question_id, 5149
+question, is it a pillow?
+answer, 1
+category, 50
+bbox, [0.01379687525331974, 0.37812647223472595, 0.06528124958276749, 0.042131148278713226]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE9A0>
+question_id, 5162
+question, it is a lamp?
+answer, 1
+category, 50
+bbox, [0.01379687525331974, 0.37812647223472595, 0.06528124958276749, 0.042131148278713226]
+image, <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=640x427 at 0x7FEA2D9CE820>
+question_id, 5175
+question, is it on the table with lamp?
+answer, 0
+category, 50
+bbox, [0.01379687525331974, 0.37812647223472595, 0.06528124958276749, 0.042131148278713226]

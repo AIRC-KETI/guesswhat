@@ -1,4 +1,6 @@
+from gc import freeze
 from typing import Any, Optional, Tuple, Union
+from xmlrpc.client import Boolean
 
 from transformers import (
     VisionTextDualEncoderModel,
@@ -64,6 +66,13 @@ class MyVisionTextDualEncoderModel(VisionTextDualEncoderModel):
         text_model: Optional[PreTrainedModel] = None,
     ):
         super().__init__(config, vision_model, text_model)
+        self.freeze_clip()
+    
+    def freeze_clip(self):
+        for param in self.vision_model.parameters():
+            param.requires_grad = False
+        for param in self.text_model.parameters():
+            param.requires_grad = False
     
     def forward(
         self,
@@ -206,11 +215,6 @@ class OracleModel(PreTrainedModel):
         patch_size = vision_config.patch_size
         self.image_seq_len = (image_size//patch_size)
         self.image_special_tokens_left = 1
-
-    def freeze_clip(self):
-        for param in self.vision_text_model.parameters():
-            print(param)
-            param.requires_grad = False
     
     def _build_our_attention_mask(self, input_ids, attention_mask, bbox, name='restricted'):
         # lazily create causal attention mask, with full attention between the vision tokens
@@ -311,7 +315,6 @@ class OracleModelForSequenceClassification(OracleModel):
         self.num_labels = num_labels = 3
         self.dropout = nn.Dropout(classifier_dropout)
         self.classifier = nn.Linear(config.fusion_model_config.hidden_size, num_labels)
-        self.freeze_clip()
 
     def forward(
         self,
