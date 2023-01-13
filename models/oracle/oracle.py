@@ -277,6 +277,7 @@ class OracleModelForSequenceClassification(OracleModel):
         self.num_labels = num_labels = 3
         self.dropout = nn.Dropout(classifier_dropout)
         self.classifier = nn.Linear(config.fusion_model_config.hidden_size, num_labels)
+        self.freeze_clip()
 
     def forward(
         self,
