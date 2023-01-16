@@ -132,3 +132,12 @@ dmypy.json
 huggingface_datasets
 preprocess_data
 san
+<<<<<<< HEAD
+<<<<<<< HEAD
+oracle_results
+=======
+epoch_results
+>>>>>>> remove results
+=======
+oracle_results
+>>>>>>> remove oracle_results
