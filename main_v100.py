@@ -239,7 +239,7 @@ def parse_args():
         "--warmup_portion", type=float, default=0, help="Portion of total training steps for the warmup in the lr scheduler."
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=1e-3,  # c1, v100 
+        "--learning_rate", type=float, default=1e-2,  # c1, v100 
         help="Initial learning rate (after the potential warmup period) to use.",
     )
 
@@ -454,7 +454,9 @@ def main():
             "weight_decay": 0.0,
         },
     ]
-    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate * torch.cuda.device_count() * args.per_device_train_batch_size * args.gradient_accumulation_steps)
+    current_learning_rate = args.learning_rate * torch.cuda.device_count() * args.per_device_train_batch_size * args.gradient_accumulation_steps
+    print(f"[*]rate: {current_learning_rate}")
+    optimizer = AdamW(optimizer_grouped_parameters, lr=current_learning_rate)
  
     # scheduler
     overrode_max_train_steps = False

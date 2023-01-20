@@ -18,7 +18,7 @@ from transformers import (
 
 from models.fusion.configuration_fusion import FusionConfig
 from models.oracle.configuration_oracle import OracleConfig
-from models.oracle.oracle import OracleModel
+from models.oracle.modeling_oracle import OracleModel
 
 
 fusion_model_config_path = "models/fusion/config.json"
