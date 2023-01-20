@@ -366,9 +366,7 @@ class FusionTransformer(nn.Module):
         # text_embeds.shape = [batch_size, sequence_length, transformer.width]
         # take features from the eot embedding (eot_token is the highest number in each sequence)
         # casting to torch.int for onnx compatibility: argmax doesn't support int64 inputs with opset 14
-        pooled_output = last_hidden_state[
-            torch.arange(last_hidden_state.shape[0], device=input_ids.device), input_ids[:,:,0].to(torch.int).argmax(dim=-1)
-        ]
+        pooled_output = last_hidden_state[:,0,:]
         if not return_dict:
             return (last_hidden_state) + encoder_outputs[1:]
 

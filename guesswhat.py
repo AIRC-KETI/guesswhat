@@ -118,7 +118,7 @@ COCO_CAT = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train'
 GW_ANS_CAT = ['Yes', 'No', 'N/A']
 
 ANSWER_FEATURE = datasets.ClassLabel(num_classes=len(GW_ANS_CAT), names=GW_ANS_CAT)
-COCO_OBJ_CAT_FEATURE = datasets.ClassLabel(num_classes=len(COCO_CAT), names=COCO_CAT)
+COCO_OBJ_CAT_FEATURE = datasets.ClassLabel(num_classes=len(COCO_CAT), names=COCO_CAT)  # 91
 
 ORACLE_FEATURES = datasets.Features(
                 {
@@ -200,6 +200,13 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
             version=_VERSION,
             features=ORACLE_FEATURES
         ),
+        GuessWhatConfig(
+            data_urls=BASE_URLS,
+            citation=_CITATION,
+            name="oracle_with_category",
+            version=_VERSION,
+            features=ORACLE_FEATURES
+        ),
     ]
 
     BUILDER_CONFIG_CLASS = GuessWhatConfig
@@ -258,15 +265,28 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
                     bbox = item["objects"][str(item["object_id"])]["bbox"]
                     w, h = item["picture"]["width"], item["picture"]["height"]
                     new_bbox = [bbox[0]/w, bbox[1]/h, bbox[2]/w, bbox[3]/h]
-                    new_item = {
-                        "image": os.path.join(folder_name, file_name),
-                        "question_id": qas["id"],
-                        "question": qas["q"],
-                        "answer": qas["a"],
-                        "category": item["objects"][str(item["object_id"])]["category"],
-                        "bbox": new_bbox,
-                    }
-                    yield returned_idx, new_item
+                    if "oracle_with_category" in self.config.name:
+                        new_item = {
+                            "image": os.path.join(folder_name, file_name),
+                            "question_id": qas["id"],
+                            "question": "question: " + qas["q"] + " category: " + item["objects"][str(item["object_id"])]["category"],
+                            "answer": qas["a"],
+                            "category": item["objects"][str(item["object_id"])]["category"],
+                            "bbox": new_bbox,
+                        }
+                        yield returned_idx, new_item
+                    elif "oracle" in self.config.name:
+                        new_item = {
+                            "image": os.path.join(folder_name, file_name),
+                            "question_id": qas["id"],
+                            "question": qas["q"],
+                            "answer": qas["a"],
+                            "category": item["objects"][str(item["object_id"])]["category"],
+                            "bbox": new_bbox,
+                        }
+                        yield returned_idx, new_item
+                    else:
+                        pass
                     returned_idx += 1             
 
 
