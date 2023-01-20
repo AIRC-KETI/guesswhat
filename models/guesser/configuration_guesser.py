@@ -14,8 +14,8 @@ from models.fusion.configuration_fusion import FusionConfig
 logger = logging.get_logger(__name__)
 
 
-class OldOracleConfig(PretrainedConfig):
-    model_type: str = "oracle"
+class OldGuesserConfig(PretrainedConfig):
+    model_type: str = "guesser"
     is_composition: bool = True
 
     def __init__(self, clip_config=None, fusion_config=None, **kwargs):
@@ -46,10 +46,10 @@ class OldOracleConfig(PretrainedConfig):
         return self.clip_config
 
 
-class OracleConfig(PretrainedConfig):
+class GuesserConfig(PretrainedConfig):
     r"""
-    [`OracleConfig`] is the configuration class to store the configuration of a
-    [`OracleModel`]. It is used to instantiate [`OracleModel`] model according to the
+    [`GuesserConfig`] is the configuration class to store the configuration of a
+    [`GuesserModel`]. It is used to instantiate [`GuesserModel`] model according to the
     specified arguments, defining the text model, vision model, and fusion model configs.
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -64,7 +64,7 @@ class OracleConfig(PretrainedConfig):
             Dictionary of keyword arguments.
     """
 
-    model_type = "Oracle"
+    model_type = "Guesser"
     is_composition = True
 
     def __init__(self, projection_dim=None, logit_scale_init_value=2.6592, **kwargs):

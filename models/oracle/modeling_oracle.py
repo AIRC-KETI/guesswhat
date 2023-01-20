@@ -5,6 +5,8 @@ from xmlrpc.client import Boolean
 from transformers import (
     VisionTextDualEncoderModel,
     VisionTextDualEncoderConfig,
+    CLIPModel,
+    CLIPConfig,
 )
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import (
@@ -29,9 +31,159 @@ from models.oracle.configuration_oracle import OracleConfig
 
 
 logger = logging.get_logger(__name__)
+# -----------------------------------------------------------------
+# CUSTOM CLIP -----------------------------------------------
+# -----------------------------------------------------------------
+class MyCLIPOutput(ModelOutput):
+    """
+    Args:
+        text_embeds(`torch.FloatTensor` of shape `(batch_size, output_dim`):
+            The text embeddings obtained by applying the projection layer to the pooled output of [`CLIPTextModel`].
+        image_embeds(`torch.FloatTensor` of shape `(batch_size, output_dim`):
+            The image embeddings obtained by applying the projection layer to the pooled output of [`CLIPVisionModel`].
+        text_model_output(`MyVisionTextDualEncoderOutput`):
+            The output of the [`CLIPTextModel`].
+        vision_model_output(`MyVisionTextDualEncoderOutput`):
+            The output of the [`CLIPVisionModel`].
+    """
+
+    text_embeds: torch.FloatTensor = None
+    image_embeds: torch.FloatTensor = None
+    text_model_output: BaseModelOutputWithPooling = None
+    vision_model_output: BaseModelOutputWithPooling = None
+
+    def to_tuple(self) -> Tuple[Any]:
+        return tuple(
+            self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
+            for k in self.keys()
+        )
+
+
+class MyCLIPModel(CLIPModel):
+    base_model_prefix = "my_clip"
+    def __init__(
+        self,
+        config: Optional[CLIPConfig] = None,
+    ):
+        super().__init__(config)
+        self.freeze_clip()
+    
+    def freeze_clip(self):
+        for param in self.vision_model.parameters():
+            param.requires_grad = False
+        for param in self.text_model.parameters():
+            param.requires_grad = False
+    
+    def forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        pixel_values: Optional[torch.FloatTensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, MyCLIPOutput]:
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        vision_outputs = self.vision_model(
+            pixel_values=pixel_values,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        text_outputs = self.text_model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+
+        # [bsz, row_patches*col_patches, model_dim] [model_dim, model_dim2]
+        # [bsz, model_dim] [model_dim, model_dim2]
+        image_embeds = vision_outputs[0]
+        image_embeds = self.visual_projection(image_embeds)
+
+        # text_embeds = text_outputs[0]  # seq
+        text_embeds = text_outputs[1]  # pooled
+        text_embeds = self.text_projection(text_embeds).unsqueeze(1)
+
+        if not return_dict:
+            output = (text_embeds, image_embeds, text_outputs, vision_outputs)
+            return output
+
+        return MyCLIPOutput(
+            text_embeds=text_embeds,
+            image_embeds=image_embeds,
+            text_model_output=text_outputs,
+            vision_model_output=vision_outputs,
+        )
+
+    def get_image_seq_features(
+            self,
+            pixel_values: Optional[torch.FloatTensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+        ) -> torch.FloatTensor:
+        # Use CLIP model's config for some fields (if specified) instead of those of vision & text components.
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        vision_outputs = self.vision_model(
+            pixel_values=pixel_values,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        b, seq, features = vision_outputs.last_hidden_state.size()
+        image_features = self.visual_projection(vision_outputs.last_hidden_state.view(b * seq, -1))
+
+        return image_features.view(b, seq, -1)
+    
+    def get_text_seq_features(
+        self,
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> torch.FloatTensor:
+        # Use CLIP model's config for some fields (if specified) instead of those of vision & text components.
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        text_outputs = self.text_model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        b, seq, features = text_outputs.last_hidden_state.size()
+        text_features = self.text_projection(text_outputs.last_hidden_state.view(b * seq, -1))
+
+        return text_features.view(b, seq, -1)
 
 # -----------------------------------------------------------------
-# CUSTOM CLIP MODEL -----------------------------------------------
+# CUSTOM TextDualEncoder -----------------------------------------------
 # -----------------------------------------------------------------
 class MyVisionTextDualEncoderOutput(ModelOutput):
     """
@@ -40,9 +192,9 @@ class MyVisionTextDualEncoderOutput(ModelOutput):
             The text embeddings obtained by applying the projection layer to the pooled output of [`CLIPTextModel`].
         image_embeds(`torch.FloatTensor` of shape `(batch_size, output_dim`):
             The image embeddings obtained by applying the projection layer to the pooled output of [`CLIPVisionModel`].
-        text_model_output(`BaseModelOutputWithPooling`):
+        text_model_output(`MyVisionTextDualEncoderOutput`):
             The output of the [`CLIPTextModel`].
-        vision_model_output(`BaseModelOutputWithPooling`):
+        vision_model_output(`MyVisionTextDualEncoderOutput`):
             The output of the [`CLIPVisionModel`].
     """
 
@@ -59,6 +211,7 @@ class MyVisionTextDualEncoderOutput(ModelOutput):
 
 
 class MyVisionTextDualEncoderModel(VisionTextDualEncoderModel):
+    base_model_prefix = "my_vision_text_dual_encoder"
     def __init__(
         self,
         config: Optional[VisionTextDualEncoderConfig] = None,
@@ -206,6 +359,8 @@ class OracleModel(PreTrainedModel):
             self.vision_text_model = MyVisionTextDualEncoderModel.from_pretrained(vision_text_pretrained)
         elif language_model_path is not None and vision_model_path is not None:
             self.vision_text_model = MyVisionTextDualEncoderModel.from_vision_text_pretrained(vision_model_path, language_model_path)
+        elif "clip" in config.vision_text_model_config.model_type:
+            self.vision_text_model = MyCLIPModel(config.vision_text_model_config)
         else:
             self.vision_text_model = MyVisionTextDualEncoderModel(config.vision_text_model_config)
         self.fusion_model = FusionModel(config.fusion_model_config)
@@ -283,6 +438,36 @@ class OracleModel(PreTrainedModel):
         return mask  # 1 filled, 0 masked
 
 
+class OracleSequenceClassifierOutput(ModelOutput):
+    """
+    Base class for outputs of sentence classification models.
+
+    Args:
+        loss (`torch.FloatTensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+            Classification (or regression if config.num_labels==1) loss.
+        logits (`torch.FloatTensor` of shape `(batch_size, config.num_labels)`):
+            Classification (or regression if config.num_labels==1) scores (before SoftMax).
+        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `torch.FloatTensor` (one for the output of the embeddings, if the model has an embedding layer, +
+            one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
+
+            Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
+        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+            sequence_length)`.
+
+            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
+            heads.
+    """
+
+    answer_loss: Optional[torch.FloatTensor] = None
+    class_loss: Optional[torch.FloatTensor] = None
+    answer_logits: torch.FloatTensor = None
+    class_logits: torch.FloatTensor = None
+    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
+    attentions: Optional[Tuple[torch.FloatTensor]] = None
+
+
 class OracleModelForSequenceClassification(OracleModel):
     config_class = OracleConfig
     base_model_prefix = "oracle"
@@ -297,13 +482,6 @@ class OracleModelForSequenceClassification(OracleModel):
             language_model_path=None,
             **kwargs):
         super().__init__(config, *inputs, **kwargs)
-        if vision_text_pretrained is not None:
-            self.vision_text_model = MyVisionTextDualEncoderModel.from_pretrained(vision_text_pretrained)
-        elif language_model_path is not None and vision_model_path is not None:
-            self.vision_text_model = MyVisionTextDualEncoderModel.from_vision_text_pretrained(vision_model_path, language_model_path)
-        else:
-            self.vision_text_model = MyVisionTextDualEncoderModel(config.vision_text_model_config)
-        self.fusion_model = FusionModel(config.fusion_model_config)
     
         vision_config = config.vision_text_model_config.vision_config
         image_size = vision_config.image_size
@@ -313,8 +491,10 @@ class OracleModelForSequenceClassification(OracleModel):
 
         classifier_dropout = 0.
         self.num_labels = num_labels = 3
+        self.class_category = class_category = 91
         self.dropout = nn.Dropout(classifier_dropout)
         self.classifier = nn.Linear(config.fusion_model_config.hidden_size, num_labels)
+        self.classifier_cat = nn.Linear(config.fusion_model_config.hidden_size, class_category)
 
     def forward(
         self,
@@ -331,20 +511,32 @@ class OracleModelForSequenceClassification(OracleModel):
         category = None,
         bbox = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
-        vision_text_output = self.vision_text_model(
-            input_ids = input_ids, 
-            pixel_values = pixel_values, 
-            attention_mask = attention_mask, 
-            position_ids = position_ids, 
-            token_type_ids = token_type_ids,
-            output_attentions = output_attentions, 
-            output_hidden_states = output_hidden_states, 
-            return_dict = return_dict,
-        )
+        if 'clip' in self.vision_text_model.base_model_prefix:
+                vision_text_output = self.vision_text_model(
+                input_ids = input_ids, 
+                pixel_values = pixel_values, 
+                attention_mask = attention_mask, 
+                position_ids = position_ids, 
+                output_attentions = output_attentions, 
+                output_hidden_states = output_hidden_states, 
+                return_dict = return_dict,
+            )
+        else: 
+            vision_text_output = self.vision_text_model(
+                input_ids = input_ids, 
+                pixel_values = pixel_values, 
+                attention_mask = attention_mask, 
+                position_ids = position_ids, 
+                token_type_ids = token_type_ids,
+                output_attentions = output_attentions, 
+                output_hidden_states = output_hidden_states, 
+                return_dict = return_dict,
+            )
 
         vision_seq_embeds = vision_text_output.image_embeds
         text_seq_embeds = vision_text_output.text_embeds
         fusion_model_input_ids = torch.cat((vision_seq_embeds, text_seq_embeds,), 1)
+        attention_mask = torch.ones(attention_mask.size(0), 1, device=attention_mask.get_device()) if 'clip' in self.vision_text_model.base_model_prefix else attention_mask
         attention_mask = self._build_our_attention_mask(fusion_model_input_ids, attention_mask, bbox)
         outputs = self.fusion_model(
                 input_ids = fusion_model_input_ids, # [B, 1+49+seq, 512]
@@ -361,7 +553,7 @@ class OracleModelForSequenceClassification(OracleModel):
         pooler_output = outputs.pooler_output
         pooler_output = self.dropout(pooler_output)
         logits = self.classifier(pooler_output)
-
+        class_logits = self.classifier_cat(pooler_output)
         loss = None
         if labels is not None:
             if self.config.problem_type is None:
@@ -384,13 +576,37 @@ class OracleModelForSequenceClassification(OracleModel):
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
-        if not return_dict:
-            output = (logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
+        class_loss = None
+        if category is not None:
+            if self.config.problem_type is None:
+                if self.class_category == 1:
+                    self.config.problem_type = "regression"
+                elif self.class_category > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
 
-        return SequenceClassifierOutput(
-            loss=loss,
-            logits=logits,
+            if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
+                if self.class_category == 1:
+                    class_loss = loss_fct(class_logits.squeeze(), category.squeeze())
+                else:
+                    class_loss = loss_fct(class_logits, category)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = CrossEntropyLoss()
+                class_loss = loss_fct(class_logits.view(-1, self.class_category), category.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = BCEWithLogitsLoss()
+                class_loss = loss_fct(class_logits, category)            
+        if not return_dict:
+            output = (class_logits,) + outputs[2:]
+            return ((class_loss,) + output) if loss is not None else output
+
+        return OracleSequenceClassifierOutput(
+            loss = loss,
+            class_loss = class_loss,
+            logits = logits,
+            class_logits = class_logits,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
