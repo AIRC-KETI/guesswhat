@@ -15,5 +15,6 @@
   "projection_dim": 512,
   "dropout": 0.0,
   "attention_dropout": 0.0,
-  "initializer_factor": 1.0
+  "initializer_factor": 1.0,
+  "summary_type": "mean"
 }
