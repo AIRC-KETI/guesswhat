@@ -133,43 +133,43 @@ for idx, batch in zip(range(1), train_dataloader):
 
 
 
-# import numpy as np
-# import PIL.Image
-# import PIL.ImageDraw
+import numpy as np
+import PIL.Image
+import PIL.ImageDraw
 
 
-# c = (255, 0, 0)
+c = (255, 0, 0)
 
-# for idx, batch in zip(range(3), train_dataloader):
+for idx, batch in zip(range(3), train_dataloader):
 
-#     for sid in range(per_device_train_batch_size):
-#         image = batch["pixel_values"][sid]*image_std[:,None,None] + image_mean[:,None,None]
-#         image = image.numpy()
-#         if image.ndim == 3 and image.shape[0] in [1, 3]:
-#             image = image.transpose(1, 2, 0)
-#         image*=255.
-#         image = image.astype(np.uint8)
-#         image = PIL.Image.fromarray(image)
-
-
-#         bb = batch["bbox"][sid].numpy()*image_size
-#         print(bb)
-#         img = image.convert("RGBA")
-#         overlay = PIL.Image.new('RGBA', img.size, (0, 0, 0, 0))
-#         draw = PIL.ImageDraw.Draw(overlay)
-#         draw.rectangle((bb[0], bb[1], bb[0]+bb[2], bb[1]+bb[3]), outline=c, width = 3)
-#         img = PIL.Image.alpha_composite(img, overlay)
-#         image = img.convert("RGB")
-
-#         answer = batch["answer"][sid].numpy()
-#         answer = id2label[int(answer)]
-
-#         cat = batch["category"][sid].numpy()
-#         cat = id2label_cat[int(cat)]
+    for sid in range(per_device_train_batch_size):
+        image = batch["pixel_values"][sid]*image_std[:,None,None] + image_mean[:,None,None]
+        image = image.numpy()
+        if image.ndim == 3 and image.shape[0] in [1, 3]:
+            image = image.transpose(1, 2, 0)
+        image*=255.
+        image = image.astype(np.uint8)
+        image = PIL.Image.fromarray(image)
 
 
-#         image.save(os.path.join(output_dir, f"{idx}_{sid}.jpg"))
-#         print(tokenizer.decode(batch["input_ids"][sid]), answer, cat)
+        bb = batch["bbox"][sid].numpy()*image_size
+        print(bb)
+        img = image.convert("RGBA")
+        overlay = PIL.Image.new('RGBA', img.size, (0, 0, 0, 0))
+        draw = PIL.ImageDraw.Draw(overlay)
+        draw.rectangle((bb[0], bb[1], bb[0]+bb[2], bb[1]+bb[3]), outline=c, width = 3)
+        img = PIL.Image.alpha_composite(img, overlay)
+        image = img.convert("RGB")
+
+        answer = batch["answer"][sid].numpy()
+        answer = id2label[int(answer)]
+
+        cat = batch["category"][sid].numpy()
+        cat = id2label_cat[int(cat)]
+
+
+        image.save(os.path.join(output_dir, f"{idx}_{sid}.jpg"))
+        print(tokenizer.decode(batch["input_ids"][sid]), answer, cat)
 
 
 # for idx, item in zip(range(6), train_dataset):

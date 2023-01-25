@@ -26,7 +26,7 @@ from torch.nn import (
     BCEWithLogitsLoss,
 )
 
-from models.fusion.fusion import FusionModel
+from models.fusion.modeling_fusion import FusionModel
 from models.guesser.configuration_guesser import GuesserConfig
 
 

@@ -1,5 +1,4 @@
 import os
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import argparse
 import math
 import random
@@ -15,10 +14,6 @@ from typing import (
 )
 from dataclasses import dataclass
 from datetime import timedelta
-
-from PIL import PngImagePlugin
-LARGE_ENOUGH_NUMBER = 100
-PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
 
 import tqdm
 import torch
@@ -233,7 +228,7 @@ def parse_args():
         help="Whether the various states should be saved at the end of every n steps, or 'epoch' for each epoch.",
     )
     parser.add_argument(
-        "--weight_decay", type=float, default=0.,
+        "--weight_decay", type=float, default=1e-2,
         help="Weight decay to use.",
     )
     parser.add_argument(
@@ -244,13 +239,13 @@ def parse_args():
         "--warmup_portion", type=float, default=0, help="Portion of total training steps for the warmup in the lr scheduler."
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=1/pow(2, 20),  # c1, v100 
+        "--learning_rate", type=float, default=1e-6,  # c1, v100 
         help="Initial learning rate (after the potential warmup period) to use.",
     )
 
     # logging
     parser.add_argument(
-        "--output_dir", type=str, default='v100_oracle_results_clip_deepspeed',
+        "--output_dir", type=str, default='v100_oracle_results_clip_category',
         help="Where to store the final model."
     )
 
@@ -312,7 +307,7 @@ def main():
     # dataset
     raw_datasets = load_dataset(
         "guesswhat.py",
-        "oracle_resize",
+        "oracle",
         cache_dir="huggingface_datasets"
     )
     # map cache, transform = on the fly, cache X
@@ -419,12 +414,13 @@ def main():
     calc_bbox_fn = functools.partial(calc_bbox, size=image_size)
 
     def encode(features):
-        features_tmp = processor(text=features["question"], images=features["image"], return_tensors="pt", padding=True)
-        # wh_l = [image.size for image in features["image"]]
+        features_tmp = processor(text=features["question"], images=[image for image in features["image"]], return_tensors="pt")
+        wh_l = [image.size for image in features["image"]]
         # bbox_l = [bbox for bbox in features["bbox"]]
         
         # features_tmp["bbox"] = [calc_bbox_fn(wh, bbox) for wh, bbox in zip(wh_l, bbox_l)]
-        for k in ["answer", "category", "bbox"]:
+        
+        for k in ["answer", "category"]:
             features_tmp[k] = features[k]
         return features_tmp
 
@@ -442,6 +438,7 @@ def main():
 
     data_collator = DataCollatorWithPadding(processor.tokenizer, pad_to_multiple_of=(8 if accelerator.use_fp16 else None))
 
+
     train_dataloader = DataLoader(train_dataset, collate_fn=data_collator, shuffle=True, batch_size=args.per_device_train_batch_size)
     eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
     test_dataloader = DataLoader(test_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
@@ -457,7 +454,8 @@ def main():
             "weight_decay": 0.0,
         },
     ]
-    current_learning_rate = args.learning_rate * float(torch.cuda.device_count()) * float(args.gradient_accumulation_steps)
+    current_learning_rate = args.learning_rate * torch.cuda.device_count() * args.per_device_train_batch_size * args.gradient_accumulation_steps
+    print(f"[*]rate: {current_learning_rate}")
     optimizer = AdamW(optimizer_grouped_parameters, lr=current_learning_rate)
  
     # scheduler
@@ -548,174 +546,7 @@ def main():
             total_loss = 0
             total_class_loss = 0
         for step, batch in enumerate(train_dataloader):
-            with accelerator.accumulate(model):
-                # We need to skip steps until we reach the resumed step
-                if args.resume_from_checkpoint and epoch == starting_epoch:
-                    if resume_step is not None and step < resume_step:
-                        completed_steps += 1
-                        continue
-                """
-                input_ids, token_type_ids, attention_mask, pixel_values, answer, category, bbox
-                """
-                batch["labels"] = batch["answer"] if 'Oracle' in args.task else batch["category"]
-                batch["pixel_values"] = batch["pixel_values"].type(torch.float16) if accelerator.use_fp16 else batch["pixel_values"]
-                batch["bbox"] = batch["bbox"].type(torch.float16) if accelerator.use_fp16 else batch["bbox"]
-                outputs = model(**batch)
-                loss = outputs.loss
-                # We keep track of the loss at each epoch
-                class_loss = outputs.class_loss
-                if args.with_tracking:
-                    total_loss += loss.detach().float()
-                    total_class_loss = total_class_loss + class_loss.detach().float() if class_loss is not None else None
-                loss = loss + class_loss if class_loss is not None else loss
-                accelerator.backward(loss)
-                optimizer.step()
-                scheduler.step()
-                optimizer.zero_grad()
-                progress_bar.update(1)
-                completed_steps += 1   
-
-                if isinstance(checkpointing_steps, int):
-                    if completed_steps % checkpointing_steps == 0:
-                        output_dir = f"step_{completed_steps}"
-                        if args.output_dir is not None:
-                            output_dir = os.path.join(args.output_dir, output_dir)
-                        accelerator.save_state(output_dir)
-
-                if completed_steps >= args.max_train_steps:
-                    break
-                if step % 100 == 0 and args.with_tracking:
-                    accelerator.log(
-                        {
-                            "train_answer_loss": total_loss.item() / completed_steps,
-                            "train_class_loss": total_class_loss.item() / completed_steps if outputs.class_logits is not None else None,
-                            "epoch": epoch,
-                            "step": completed_steps,
-                        },
-                        step=completed_steps,
-                    )
-
-        model.eval()
-        samples_seen = 0
-        for step, batch in enumerate(eval_dataloader):
-            with torch.no_grad():
-                outputs = model(**batch)
-            predictions = outputs.logits.argmax(dim=-1)
-            predictions, references = accelerator.gather((predictions, batch["answer"]))
-            # If we are in a multiprocess environment, the last batch has duplicates
-            if accelerator.num_processes > 1:
-                if step == len(eval_dataloader) - 1:
-                    predictions = predictions[: len(eval_dataloader.dataset) - samples_seen]
-                    references = references[: len(eval_dataloader.dataset) - samples_seen]
-                else:
-                    samples_seen += references.shape[0]
-            metric.add_batch(
-                predictions=predictions,
-                references=references,
-            )
-            if outputs.class_logits is not None:
-                predictions = outputs.class_logits.argmax(dim=-1)
-                predictions, references = accelerator.gather((predictions, batch["category"]))
-                # If we are in a multiprocess environment, the last batch has duplicates
-                if accelerator.num_processes > 1:
-                    if step == len(eval_dataloader) - 1:
-                        predictions = predictions[: len(eval_dataloader.dataset) - samples_seen]
-                        references = references[: len(eval_dataloader.dataset) - samples_seen]
-                    else:
-                        samples_seen += references.shape[0]
-                class_metric.add_batch(
-                    predictions=predictions,
-                    references=references,
-                )
-        eval_metric = metric.compute()
-        logger.info(f"epoch {epoch} accuracy: {eval_metric}")
-        if outputs.class_logits is not None:
-            class_eval_metric = class_metric.compute()
-            logger.info(f"epoch {epoch} class accuracy: {class_eval_metric}")
-
-        if args.with_tracking:
-            accelerator.log(
-                {
-                    "accuracy": eval_metric,
-                    "class_accuracy": class_eval_metric if outputs.class_logits is not None else None,
-                    "train_answer_loss": total_loss.item() / len(eval_dataloader.dataset),
-                    "train_class_loss": total_class_loss.item() / len(eval_dataloader.dataset) if outputs.class_logits is not None else None,
-                    "epoch": epoch,
-                    "step": completed_steps,
-                },
-                step=completed_steps,
-            )
-
-        if epoch < args.num_train_epochs - 1:
-            accelerator.wait_for_everyone()
-            unwrapped_model = accelerator.unwrap_model(model)
-            unwrapped_model.save_pretrained(
-                args.output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save
-            )
-            if accelerator.is_main_process:
-                processor.save_pretrained(args.output_dir)
-
-        if args.checkpointing_steps == "epoch":
-            output_dir = f"epoch_{epoch}"
-            if args.output_dir is not None:
-                output_dir = os.path.join(args.output_dir, output_dir)
-            accelerator.save_state(output_dir)
-    
-    model.eval()
-    samples_seen = 0
-    for step, batch in enumerate(test_dataloader):
-        with torch.no_grad():
-            outputs = model(**batch)
-        predictions = outputs.logits.argmax(dim=-1)
-        predictions, references = accelerator.gather((predictions, batch["answer"]))
-        # If we are in a multiprocess environment, the last batch has duplicates
-        if accelerator.num_processes > 1:
-            if step == len(test_dataloader) - 1:
-                predictions = predictions[: len(test_dataloader.dataset) - samples_seen]
-                references = references[: len(test_dataloader.dataset) - samples_seen]
-            else:
-                samples_seen += references.shape[0]
-        metric.add_batch(
-            predictions=predictions,
-            references=references,
-        )
-        if outputs.class_logits is not None:
-            predictions = outputs.class_logits.argmax(dim=-1)
-            predictions, references = accelerator.gather((predictions, batch["category"]))
-            # If we are in a multiprocess environment, the last batch has duplicates
-            if accelerator.num_processes > 1:
-                if step == len(test_dataloader) - 1:
-                    predictions = predictions[: len(test_dataloader.dataset) - samples_seen]
-                    references = references[: len(test_dataloader.dataset) - samples_seen]
-                else:
-                    samples_seen += references.shape[0]
-            class_metric.add_batch(
-                predictions=predictions,
-                references=references,
-            )
-    eval_metric = metric.compute()
-    logger.info(f"epoch {epoch} accuracy: {eval_metric}")
-    if outputs.class_logits is not None:
-        class_eval_metric = class_metric.compute()
-        logger.info(f"epoch {epoch} class accuracy: {class_eval_metric}")
-
-    if args.with_tracking:
-        accelerator.end_training()
-
-    if args.output_dir is not None:
-        accelerator.wait_for_everyone()
-        unwrapped_model = accelerator.unwrap_model(model)
-        unwrapped_model.save_pretrained(
-            args.output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save
-        )
-        if accelerator.is_main_process:
-            processor.save_pretrained(args.output_dir)
-
-    if args.output_dir is not None:
-        all_results = {f"eval_{k}": v for k, v in eval_metric.items()}
-        with open(os.path.join(args.output_dir, "all_results.json"), "w") as f:
-            json.dump(all_results, f)
-
+            progress_bar.update(1)
 
 if __name__ == "__main__":
     main()

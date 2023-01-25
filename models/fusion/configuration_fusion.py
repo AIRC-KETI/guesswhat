@@ -34,6 +34,7 @@ class FusionConfig(PretrainedConfig):
         dropout = 0.0,
         attention_dropout = 0.0,
         initializer_factor = 1.0,
+        summary_type = 'mean',
         **kwargs
     ):
         super().__init__(fusion_model_type=None, **kwargs)
@@ -50,6 +51,7 @@ class FusionConfig(PretrainedConfig):
         self.dropout = dropout
         self.attention_dropout = attention_dropout
         self.initializer_factor = initializer_factor
+        self.summary_type = summary_type,
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
