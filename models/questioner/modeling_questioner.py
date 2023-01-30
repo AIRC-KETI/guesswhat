@@ -28,7 +28,7 @@ from torch.nn import (
 import torchvision
 
 from models.fusion.modeling_fusion import FusionModel
-from models.guesser.configuration_guesser import GuesserConfig
+from models.Questioner.configuration_Questioner import QuestionerConfig
 
 
 logger = logging.get_logger(__name__)
@@ -338,18 +338,18 @@ class MyVisionTextDualEncoderModel(VisionTextDualEncoderModel):
         return text_features.view(b, seq, -1)
 
 # -----------------------------------------------------------------
-# Guesser MODEL ----------------------------------------------------
+# Questioner MODEL ----------------------------------------------------
 # -----------------------------------------------------------------
 
 
-class GuesserModel(PreTrainedModel):
-    config_class = GuesserConfig
-    base_model_prefix = "guesser"
+class QuestionerModel(PreTrainedModel):
+    config_class = QuestionerConfig
+    base_model_prefix = "Questioner"
     supports_gradient_checkpointing = True
     _keys_to_ignore_on_load_missing = [r"position_ids"]
     
     def __init__(self, 
-            config: GuesserConfig, 
+            config: QuestionerConfig, 
             *inputs,
             vision_text_pretrained=None,
             vision_model_path=None, 
@@ -446,7 +446,7 @@ class GuesserModel(PreTrainedModel):
         return mask  # 1 filled, 0 masked
 
 
-class GuesserSequenceClassifierOutput(ModelOutput):
+class QuestionerSequenceClassifierOutput(ModelOutput):
     """
     Base class for outputs of sentence classification models.
 
@@ -476,14 +476,14 @@ class GuesserSequenceClassifierOutput(ModelOutput):
     attentions: Optional[Tuple[torch.FloatTensor]] = None
 
 
-class GuesserModelForSequenceClassification(GuesserModel):
-    config_class = GuesserConfig
-    base_model_prefix = "guesser"
+class QuestionerModelForSequenceClassification(QuestionerModel):
+    config_class = QuestionerConfig
+    base_model_prefix = "Questioner"
     supports_gradient_checkpointing = True
     _keys_to_ignore_on_load_missing = [r"position_ids"]
     
     def __init__(self, 
-            config: GuesserConfig,
+            config: QuestionerConfig,
             *inputs,
             vision_text_pretrained=None,
             vision_model_path=None, 
@@ -502,6 +502,7 @@ class GuesserModelForSequenceClassification(GuesserModel):
         self.class_category = class_category = 91
         self.dropout = nn.Dropout(classifier_dropout)
         self.classifier = nn.Linear(config.fusion_model_config.hidden_size, num_labels)
+        self.classifier_cat = nn.Linear(config.fusion_model_config.hidden_size, class_category)
 
     def forward(
         self,
@@ -518,6 +519,9 @@ class GuesserModelForSequenceClassification(GuesserModel):
         category = None,
         bbox = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
+        """
+        
+        """
         if 'clip' in self.vision_text_model.base_model_prefix:
                 vision_text_output = self.vision_text_model(
                 input_ids = input_ids, 
@@ -544,7 +548,7 @@ class GuesserModelForSequenceClassification(GuesserModel):
         text_seq_embeds = vision_text_output.text_embeds
         fusion_model_input_ids = torch.cat((vision_seq_embeds, text_seq_embeds,), 1)
         attention_mask = torch.ones(attention_mask.size(0), 1, device=attention_mask.get_device()) if 'clip' in self.vision_text_model.base_model_prefix else attention_mask
-        attention_mask = self._build_our_attention_mask(fusion_model_input_ids, attention_mask, torch.Tensor([[0., 0., 1., 1.]]))
+        attention_mask = self._build_our_attention_mask(fusion_model_input_ids, attention_mask, bbox)
         outputs = self.fusion_model(
                 input_ids = fusion_model_input_ids, # [B, 1+49+seq, 512]
                 attention_mask = attention_mask,
@@ -556,10 +560,11 @@ class GuesserModelForSequenceClassification(GuesserModel):
                 category = category,
                 bbox = bbox
             )
-        last_hidden_state = outputs.last_hidden_state  # [B, 1+49+seq, 512]
-        area = last_hidden_state[:,1:1+pow(self.image_seq_len, 2),:]  # [B, 49, 512]
-        area = self.dropout(area)
-        logits = self.classifier(area.view())
+
+        pooler_output = outputs.pooler_output
+        pooler_output = self.dropout(pooler_output)
+        logits = self.classifier(pooler_output)
+        class_logits = self.classifier_cat(pooler_output)
         loss = None
         if labels is not None:
             if self.config.problem_type is None:
@@ -582,12 +587,37 @@ class GuesserModelForSequenceClassification(GuesserModel):
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
+        class_loss = None
+        if category is not None:
+            if self.config.problem_type is None:
+                if self.class_category == 1:
+                    self.config.problem_type = "regression"
+                elif self.class_category > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
 
-        return GuesserSequenceClassifierOutput(
+            if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
+                if self.class_category == 1:
+                    class_loss = loss_fct(class_logits.squeeze(), category.squeeze())
+                else:
+                    class_loss = loss_fct(class_logits, category)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = CrossEntropyLoss()
+                class_loss = loss_fct(class_logits.view(-1, self.class_category), category.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = BCEWithLogitsLoss()
+                class_loss = loss_fct(class_logits, category)            
+        if not return_dict:
+            output = (class_logits,) + outputs[2:]
+            return ((class_loss,) + output) if loss is not None else output
+
+        return QuestionerSequenceClassifierOutput(
             loss = loss,
-            class_loss = None,
+            class_loss = class_loss,
             logits = logits,
-            class_logits = None,
+            class_logits = class_logits,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )

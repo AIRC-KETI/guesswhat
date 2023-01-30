@@ -12,8 +12,8 @@ import zipfile
 import functools
 import re
 from PIL import Image
+import cv2
 import datasets
-
 logger = logging.getLogger(__name__)
 
 _VERSION = datasets.Version("0.1.0", "")
@@ -130,6 +130,16 @@ ORACLE_FEATURES = datasets.Features(
                     "bbox": datasets.Sequence(datasets.Value("float32"))
                 }
 )
+ORACLE_ARRAY_FEATURES = datasets.Features(
+                {
+                    "image": datasets.Array3D(dtype="int32", shape=(224, 224, 3)),
+                    "question_id": datasets.Value("string"),
+                    "question": datasets.Value("string"),
+                    "answer": ANSWER_FEATURE,
+                    "category": COCO_OBJ_CAT_FEATURE,
+                    "bbox": datasets.Sequence(datasets.Value("float32"))
+                }
+)
 # License: Creative Commons Attribution 4.0 International License
 '''
 {
@@ -221,6 +231,13 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
         GuessWhatConfig(
             data_urls=BASE_URLS,
             citation=_CITATION,
+            name="oracle_mini",
+            version=_VERSION,
+            features=ORACLE_FEATURES
+        ),
+        GuessWhatConfig(
+            data_urls=BASE_URLS,
+            citation=_CITATION,
             name="oracle",
             version=_VERSION,
             features=ORACLE_FEATURES
@@ -236,6 +253,13 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
             data_urls=BASE_URLS,
             citation=_CITATION,
             name="oracle_resize",
+            version=_VERSION,
+            features=ORACLE_FEATURES
+        ),
+        GuessWhatConfig(
+            data_urls=BASE_URLS,
+            citation=_CITATION,
+            name="oracle_resize_array_3d",
             version=_VERSION,
             features=ORACLE_FEATURES
         ),
@@ -297,6 +321,15 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
                     bbox = item["objects"][str(item["object_id"])]["bbox"]
                     w, h = item["picture"]["width"], item["picture"]["height"]
                     new_bbox = [bbox[0]/w, bbox[1]/h, bbox[2]/w, bbox[3]/h]
+                    if w >= h:
+                        re_w, re_h = int(w * (224./h)), 224
+                    else:
+                        re_w, re_h = 224, int(h * (224./w))
+                    
+                    left = (re_w - 224)//2
+                    top = (re_h - 224)//2
+                    right = (re_w + 224)//2
+                    bottom = (re_h + 224)//2
                     if "oracle_with_category" in self.config.name:
                         new_item = {
                             "image": os.path.join(folder_name, file_name),
@@ -308,19 +341,9 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
                         }
                         yield returned_idx, new_item
                     elif "oracle_resize" in self.config.name:
-                        w, h = item["picture"]["width"], item["picture"]["height"]
-                        if w >= h:
-                            re_w, re_h = int(w * (224./h)), 224
-                        else:
-                            re_w, re_h = 224, int(h * (224./w))
-                        
-                        left = (re_w - 224)/2
-                        top = (re_h - 224)/2
-                        right = (re_w + 224)/2
-                        bottom = (re_h + 224)/2
-
                         new_item = {
-                            "image": Image.open(os.path.join(folder_name, file_name)).convert('RGB').resize((re_w, re_h)).crop((left, top, right, bottom)),
+                            "image": cv2.resize(cv2.cvtColor(cv2.imread(os.path.join(folder_name, file_name)),cv2.COLOR_BGR2RGB),(re_w, re_h))[top:top+224,left:left+224],
+                            # "image": Image.open(os.path.join(folder_name, file_name)).convert('RGB').resize((re_w, re_h)).crop((left, top, right, bottom)),
                             "question_id": qas["id"],
                             "question": qas["q"],
                             "answer": qas["a"],
@@ -328,6 +351,19 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
                             "bbox": calc_bbox((re_w, re_h), new_bbox),
                         }
                         yield returned_idx, new_item
+                    elif "oracle_mini" in self.config.name:
+                        new_item = {
+                            "image": os.path.join(folder_name, file_name),
+                            "question_id": qas["id"],
+                            "question": qas["q"],
+                            "answer": qas["a"],
+                            "category": item["objects"][str(item["object_id"])]["category"],
+                            "bbox": calc_bbox((re_w, re_h), new_bbox),
+                        }
+                        if returned_idx >= 100:
+                            pass
+                        else:
+                            yield returned_idx, new_item
                     elif "oracle" in self.config.name:
                         new_item = {
                             "image": os.path.join(folder_name, file_name),
@@ -335,7 +371,7 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
                             "question": qas["q"],
                             "answer": qas["a"],
                             "category": item["objects"][str(item["object_id"])]["category"],
-                            "bbox": new_bbox,
+                            "bbox": calc_bbox((re_w, re_h), new_bbox),
                         }
                         yield returned_idx, new_item
                     else:
@@ -343,13 +379,12 @@ class GuessWhat(datasets.GeneratorBasedBuilder):
                     returned_idx += 1             
 
 
-
 if __name__ == "__main__":
     from datasets import load_dataset
 
     raw_datasets = load_dataset(
         "guesswhat.py",
-        "oracle_resize",
+        "oracle_resize_array_3d",
         cache_dir="huggingface_datasets",
         data_dir="data",
         ignore_verifications=True,

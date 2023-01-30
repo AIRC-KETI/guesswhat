@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from PIL import PngImagePlugin
+from PIL import Image
 LARGE_ENOUGH_NUMBER = 100
 PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
 
@@ -48,6 +49,7 @@ from transformers import (
     DataCollatorWithPadding,
     default_data_collator,
 )
+from transformers.data.data_collator import torch_default_data_collator
 import evaluate
 
 from models.fusion.configuration_fusion import FusionConfig
@@ -62,31 +64,24 @@ KETIAIR_TOKEN = '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'
 logger = get_logger(__name__)
 
 
-@dataclass
-class DataCollator:
-    tokenizer: PreTrainedTokenizerBase
-    padding: Union[bool, str, PaddingStrategy] = True
-    max_length: Optional[int] = None
-    pad_to_multiple_of: Optional[int] = None
-    return_tensors: str = "pt"
+# @dataclass
+# class DataCollator:
+#     tokenizer: PreTrainedTokenizerBase
+#     padding: Union[bool, str, PaddingStrategy] = True
+#     max_length: Optional[int] = None
+#     pad_to_multiple_of: Optional[int] = None
+#     return_tensors: str = "pt"
 
-    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
-        batch = self.tokenizer.pad(
-            features,
-            padding=self.padding,
-            max_length=self.max_length,
-            pad_to_multiple_of=self.pad_to_multiple_of,
-            return_tensors=self.return_tensors,
-        )
-        if "label" in batch:
-            batch["labels"] = batch["label"]
-            del batch["label"]
-        if "label_ids" in batch:
-            batch["labels"] = batch["label_ids"]
-            del batch["label_ids"]
-        
-        batch = default_data_collator(batch)
-        return batch
+#     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+#         batch = self.tokenizer.pad(
+#             features,
+#             padding=self.padding,
+#             max_length=self.max_length,
+#             pad_to_multiple_of=self.pad_to_multiple_of,
+#             return_tensors=self.return_tensors,
+#         )
+#         batch = torch_default_data_collator(batch)
+#         return batch
 
 
 def parse_args():
@@ -209,7 +204,7 @@ def parse_args():
         help="A seed for reproducible training."
     )
     parser.add_argument(
-        "--gradient_accumulation_steps",type=int, default=64,
+        "--gradient_accumulation_steps",type=int, default=1,
         help="Number of updates steps to accumulate before performing a backward/update pass.",
     )
     parser.add_argument(
@@ -244,13 +239,13 @@ def parse_args():
         "--warmup_portion", type=float, default=0, help="Portion of total training steps for the warmup in the lr scheduler."
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=1/pow(2, 20),  # c1, v100 
+        "--learning_rate", type=float, default=1.e-3,  # c1, v100 
         help="Initial learning rate (after the potential warmup period) to use.",
     )
 
     # logging
     parser.add_argument(
-        "--output_dir", type=str, default='v100_oracle_results_clip_deepspeed',
+        "--output_dir", type=str, default='v100_oracle_results_clip_0130_1_layer',
         help="Where to store the final model."
     )
 
@@ -308,16 +303,17 @@ def main():
 
     if accelerator.is_main_process and args.output_dir is not None:
         os.makedirs(args.output_dir, exist_ok=True)
-    
+
     # dataset
     raw_datasets = load_dataset(
         "guesswhat.py",
-        "oracle_resize",
+        "oracle",
         cache_dir="huggingface_datasets"
     )
+    raw_datasets.set_format(type='torch')
     # map cache, transform = on the fly, cache X
     # loader [sampler, batch_sampler], collate_fn <- (only batch_sampler's output)
-    raw_datasets.set_format(type='torch')
+    # raw_datasets.set_format(type='torch')
     # remove question_id
     raw_datasets = raw_datasets.remove_columns("question_id")
 
@@ -419,18 +415,17 @@ def main():
     calc_bbox_fn = functools.partial(calc_bbox, size=image_size)
 
     def encode(features):
-        features_tmp = processor(text=features["question"], images=features["image"], return_tensors="pt", padding=True)
+        features_tmp = processor(text=features["question"], images=features["image"], return_tensors="pt", padding=True, truncation=True)
         # wh_l = [image.size for image in features["image"]]
         # bbox_l = [bbox for bbox in features["bbox"]]
-        
         # features_tmp["bbox"] = [calc_bbox_fn(wh, bbox) for wh, bbox in zip(wh_l, bbox_l)]
         for k in ["answer", "category", "bbox"]:
             features_tmp[k] = features[k]
         return features_tmp
 
+    # raw_datasets = raw_datasets.map(encode, writer_batch_size=32)
 
     raw_datasets.set_transform(encode)
-
     train_dataset = raw_datasets["train"]
     eval_dataset = raw_datasets["validation"]
     test_dataset = raw_datasets["test"]
@@ -442,9 +437,9 @@ def main():
 
     data_collator = DataCollatorWithPadding(processor.tokenizer, pad_to_multiple_of=(8 if accelerator.use_fp16 else None))
 
-    train_dataloader = DataLoader(train_dataset, collate_fn=data_collator, shuffle=True, batch_size=args.per_device_train_batch_size)
-    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
-    test_dataloader = DataLoader(test_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
+    train_dataloader = DataLoader(train_dataset, collate_fn=data_collator, shuffle=True, batch_size=args.per_device_train_batch_size, num_workers=args.preprocessing_num_workers)
+    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size, num_workers=args.preprocessing_num_workers)
+    test_dataloader = DataLoader(test_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size, num_workers=args.preprocessing_num_workers)
     
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
@@ -457,8 +452,7 @@ def main():
             "weight_decay": 0.0,
         },
     ]
-    current_learning_rate = args.learning_rate * float(torch.cuda.device_count()) * float(args.gradient_accumulation_steps)
-    optimizer = AdamW(optimizer_grouped_parameters, lr=current_learning_rate)
+    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate * float(args.gradient_accumulation_steps))
  
     # scheduler
     overrode_max_train_steps = False
@@ -477,8 +471,6 @@ def main():
     )
 
     # Accelerator setting
-    device = accelerator.device
-    model.to(device)
     model, optimizer, train_dataloader, eval_dataloader, test_dataloader, scheduler = accelerator.prepare(
         model, optimizer, train_dataloader, eval_dataloader, test_dataloader, scheduler,
     )
@@ -557,13 +549,14 @@ def main():
                 """
                 input_ids, token_type_ids, attention_mask, pixel_values, answer, category, bbox
                 """
+                # in questioner, get logits and an image -> results output, but using guesser for generating logits 
                 batch["labels"] = batch["answer"] if 'Oracle' in args.task else batch["category"]
                 batch["pixel_values"] = batch["pixel_values"].type(torch.float16) if accelerator.use_fp16 else batch["pixel_values"]
                 batch["bbox"] = batch["bbox"].type(torch.float16) if accelerator.use_fp16 else batch["bbox"]
                 outputs = model(**batch)
                 loss = outputs.loss
                 # We keep track of the loss at each epoch
-                class_loss = outputs.class_loss
+                class_loss = outputs.class_loss if 'Oracle' in args.task else None
                 if args.with_tracking:
                     total_loss += loss.detach().float()
                     total_class_loss = total_class_loss + class_loss.detach().float() if class_loss is not None else None
@@ -587,12 +580,12 @@ def main():
                 if step % 100 == 0 and args.with_tracking:
                     accelerator.log(
                         {
-                            "train_answer_loss": total_loss.item() / completed_steps,
-                            "train_class_loss": total_class_loss.item() / completed_steps if outputs.class_logits is not None else None,
+                            "train_answer_loss": loss.detach().float().item(),
+                            "train_class_loss": class_loss.detach().float().item() if class_loss is not None else None,
                             "epoch": epoch,
-                            "step": completed_steps,
+                            "step": epoch * num_update_steps_per_epoch + step,
                         },
-                        step=completed_steps,
+                        step = epoch * num_update_steps_per_epoch + step,
                     )
 
         model.eval()
@@ -638,12 +631,10 @@ def main():
                 {
                     "accuracy": eval_metric,
                     "class_accuracy": class_eval_metric if outputs.class_logits is not None else None,
-                    "train_answer_loss": total_loss.item() / len(eval_dataloader.dataset),
-                    "train_class_loss": total_class_loss.item() / len(eval_dataloader.dataset) if outputs.class_logits is not None else None,
                     "epoch": epoch,
-                    "step": completed_steps,
+                    "step": epoch * num_update_steps_per_epoch + step,
                 },
-                step=completed_steps,
+                step= epoch * num_update_steps_per_epoch + step,
             )
 
         if epoch < args.num_train_epochs - 1:
@@ -660,7 +651,7 @@ def main():
             if args.output_dir is not None:
                 output_dir = os.path.join(args.output_dir, output_dir)
             accelerator.save_state(output_dir)
-    
+
     model.eval()
     samples_seen = 0
     for step, batch in enumerate(test_dataloader):
