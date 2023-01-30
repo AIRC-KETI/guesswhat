@@ -112,6 +112,7 @@ class GuesserConfig(PretrainedConfig):
         self.fusion_model_config = FusionConfig.for_model(fusion_model_type, **fusion_model_config)
         self.projection_dim = projection_dim
         self.logit_scale_init_value = logit_scale_init_value
+        self.problem_type = "multi_label_classification"
 
     @classmethod
     def from_vision_text_fusion_configs(cls, vision_text_model_config: PretrainedConfig, fusion_model_config: PretrainedConfig, **kwargs):
