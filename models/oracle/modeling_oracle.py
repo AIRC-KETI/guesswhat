@@ -545,7 +545,7 @@ class OracleModelForSequenceClassification(OracleModel):
         text_seq_embeds = vision_text_output.text_embeds
         fusion_model_input_ids = torch.cat((vision_seq_embeds, text_seq_embeds,), 1)
         attention_mask = torch.ones(attention_mask.size(0), 1, device=attention_mask.get_device()) if 'clip' in self.vision_text_model.base_model_prefix else attention_mask
-        attention_mask = self._build_our_attention_mask(fusion_model_input_ids, attention_mask, bbox)
+        attention_mask = self._build_our_attention_mask(fusion_model_input_ids, attention_mask, bbox, "semi")
         outputs = self.fusion_model(
                 input_ids = fusion_model_input_ids, # [B, 1+49+seq, 512]
                 attention_mask = attention_mask,
