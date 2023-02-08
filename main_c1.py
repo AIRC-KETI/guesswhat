@@ -1,4 +1,5 @@
 import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import argparse
 import math
 import random
@@ -14,6 +15,11 @@ from typing import (
 )
 from dataclasses import dataclass
 from datetime import timedelta
+
+from PIL import PngImagePlugin
+from PIL import Image
+LARGE_ENOUGH_NUMBER = 100
+PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
 
 import tqdm
 import torch
@@ -31,8 +37,9 @@ from transformers.utils import logging as transformers_logging
 from transformers.utils import PaddingStrategy
 from transformers import (
     AutoConfig,
-    VisionTextDualEncoderConfig,
+    # VisionTextDualEncoderConfig,
     VisionTextDualEncoderProcessor,
+    CLIPProcessor,
     AutoProcessor,
     AutoTokenizer,
     AutoFeatureExtractor,
@@ -42,41 +49,39 @@ from transformers import (
     DataCollatorWithPadding,
     default_data_collator,
 )
+from transformers.data.data_collator import torch_default_data_collator
 import evaluate
 
 from models.fusion.configuration_fusion import FusionConfig
 from models.oracle.configuration_oracle import OracleConfig
 from models.oracle.modeling_oracle import OracleModelForSequenceClassification
+from models.guesser.configuration_guesser import GuesserConfig
+from models.guesser.modeling_guesser import GuesserModelForSequenceClassification
+
+from models.vision_text_dual_encoder.configuration_vision_text_dual_encoder import VisionTextDualEncoderConfig
 
 KETIAIR_TOKEN = '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'
 logger = get_logger(__name__)
 
 
-@dataclass
-class DataCollator:
-    tokenizer: PreTrainedTokenizerBase
-    padding: Union[bool, str, PaddingStrategy] = True
-    max_length: Optional[int] = None
-    pad_to_multiple_of: Optional[int] = None
-    return_tensors: str = "pt"
+# @dataclass
+# class DataCollator:
+#     tokenizer: PreTrainedTokenizerBase
+#     padding: Union[bool, str, PaddingStrategy] = True
+#     max_length: Optional[int] = None
+#     pad_to_multiple_of: Optional[int] = None
+#     return_tensors: str = "pt"
 
-    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
-        batch = self.tokenizer.pad(
-            features,
-            padding=self.padding,
-            max_length=self.max_length,
-            pad_to_multiple_of=self.pad_to_multiple_of,
-            return_tensors=self.return_tensors,
-        )
-        if "label" in batch:
-            batch["labels"] = batch["label"]
-            del batch["label"]
-        if "label_ids" in batch:
-            batch["labels"] = batch["label_ids"]
-            del batch["label_ids"]
-        
-        batch = default_data_collator(batch)
-        return batch
+#     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+#         batch = self.tokenizer.pad(
+#             features,
+#             padding=self.padding,
+#             max_length=self.max_length,
+#             pad_to_multiple_of=self.pad_to_multiple_of,
+#             return_tensors=self.return_tensors,
+#         )
+#         batch = torch_default_data_collator(batch)
+#         return batch
 
 
 def parse_args():
@@ -103,7 +108,7 @@ def parse_args():
     parser.add_argument(
         "--vision_language_model_path",
         type=str,
-        default= None, 
+        default= "openai/clip-vit-base-patch16", 
         help="Pretrained vision language model name or path if not the same as model_name",
     )
     parser.add_argument(
@@ -159,13 +164,13 @@ def parse_args():
     parser.add_argument(
         "--per_device_train_batch_size",
         type=int,
-        default=8,
+        default=128,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
         "--per_device_eval_batch_size",
         type=int,
-        default=8,
+        default=128,
         help="Batch size (per device) for the evaluation dataloader.",
     )
 
@@ -184,7 +189,7 @@ def parse_args():
         help="Total number of training steps to perform. If provided, overrides num_train_epochs.",
     )
     parser.add_argument(
-        "--num_train_epochs", type=int, default=5,
+        "--num_train_epochs", type=int, default=30,
         help="Total number of training epochs to perform.")
 
     # checkpoint
@@ -199,20 +204,31 @@ def parse_args():
         help="A seed for reproducible training."
     )
     parser.add_argument(
-        "--gradient_accumulation_steps",type=int, default=64,
+        "--gradient_accumulation_steps",type=int, default=1,
         help="Number of updates steps to accumulate before performing a backward/update pass.",
     )
     parser.add_argument(
         "--with_tracking",
         action="store_true",
+        default=True,
         help="Whether to enable experiment trackers for logging.",
+    )
+    parser.add_argument(
+        "--report_to",
+        type=str,
+        default="all",
+        help=(
+            'The integration to report the results and logs to. Supported platforms are `"tensorboard"`,'
+            ' `"wandb"` and `"comet_ml"`. Use `"all"` (default) to report to all integrations.'
+            "Only applicable when `--with_tracking` is passed."
+        ),
     )
     parser.add_argument(
         "--checkpointing_steps", type=str, default='epoch',
         help="Whether the various states should be saved at the end of every n steps, or 'epoch' for each epoch.",
     )
     parser.add_argument(
-        "--weight_decay", type=float, default=1e-2,
+        "--weight_decay", type=float, default=0.,
         help="Weight decay to use.",
     )
     parser.add_argument(
@@ -223,15 +239,22 @@ def parse_args():
         "--warmup_portion", type=float, default=0, help="Portion of total training steps for the warmup in the lr scheduler."
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=4e-3,  # c1, v100 
+        "--learning_rate", type=float, default=1.e-3,  # c1, v100 
         help="Initial learning rate (after the potential warmup period) to use.",
     )
 
     # logging
     parser.add_argument(
-        "--output_dir", type=str, default='c1_oracle_results',
+        "--output_dir", type=str, default='v100_oracle_results_clip_0130_4_layer_no_roi',
         help="Where to store the final model."
     )
+
+    # task oracle, guesser, questioner
+    parser.add_argument(
+        "--task", type=str, default='Oracle',
+        choices=['Oracle, Guesser, Questioner'],
+        help="Where to store the final model."
+    )    
     args = parser.parse_args()
     return args
 
@@ -280,36 +303,48 @@ def main():
 
     if accelerator.is_main_process and args.output_dir is not None:
         os.makedirs(args.output_dir, exist_ok=True)
-    
+
     # dataset
     raw_datasets = load_dataset(
         "guesswhat.py",
         "oracle",
         cache_dir="huggingface_datasets"
     )
+    raw_datasets.set_format(type='torch')
     # map cache, transform = on the fly, cache X
     # loader [sampler, batch_sampler], collate_fn <- (only batch_sampler's output)
-    raw_datasets.set_format(type='torch')
+    # raw_datasets.set_format(type='torch')
     # remove question_id
     raw_datasets = raw_datasets.remove_columns("question_id")
 
     features = raw_datasets["train"].features
     num_labels = features["answer"].num_classes
-    
+
     id2label={ i:features["answer"].int2str(i) for i in range(num_labels)}
     label2id={ c:i for i, c in id2label.items()}
 
+    num_class = features["category"].num_classes
+    id2label_class = { i:features["category"].int2str(i) for i in range(num_class)}
+    label2id_class = { c:i for i, c in id2label_class.items()}
     # Config Setting
     # model = OracleModel.from_pretrained("oracle", use_auth_token=KETIAIR_TOKEN)
     # vision_model_path=None, 
     # language_model_path=None,
-
+    task_config_str = args.task+'Config'
+    task_model_str = args.task+'ModelForSequenceClassification'
     if args.model_name_or_path is not None:
-        oracle_config = OracleConfig.from_pretrained(args.model_name_or_path)
+        oracle_config = eval(task_config_str).from_pretrained(args.model_name_or_path)
+    elif args.vision_language_model_path is not None and "clip" in args.vision_language_model_path:
+        fusion_model_config = FusionConfig.from_pretrained(args.fusion_model_config_path)
+        vision_text_model_config = VisionTextDualEncoderConfig.from_pretrained(args.vision_language_model_path)
+        oracle_config = eval(task_config_str).from_vision_text_fusion_configs(
+            vision_text_model_config=vision_text_model_config, 
+            fusion_model_config=fusion_model_config
+        )
     elif args.vision_language_model_path is not None:
         fusion_model_config = FusionConfig.from_pretrained(args.fusion_model_config_path)
         vision_text_model_config = VisionTextDualEncoderConfig.from_pretrained(args.vision_language_model_path)
-        oracle_config = OracleConfig.from_vision_text_fusion_configs(
+        oracle_config = eval(task_config_str).from_vision_text_fusion_configs(
             vision_text_model_config=vision_text_model_config, 
             fusion_model_config=fusion_model_config
         )
@@ -321,27 +356,29 @@ def main():
             vision_config,
             text_config
         )
-        oracle_config = OracleConfig.from_vision_text_fusion_configs(
+        oracle_config = eval(task_config_str).from_vision_text_fusion_configs(
             vision_text_model_config=vision_text_model_config, 
             fusion_model_config=fusion_model_config
         )
     else:
-        oracle_config = OracleConfig()
+        oracle_config = eval(task_config_str)()
 
     if args.model_name_or_path is not None:
-        model = OracleModelForSequenceClassification.from_pretrained(args.model_name_or_path)
+        model = eval(task_model_str).from_pretrained(args.model_name_or_path)
     elif args.vision_language_model_path is not None:
-        model = OracleModelForSequenceClassification(oracle_config, vision_language_model_path=args.vision_language_model_path)
+        model = eval(task_model_str)(oracle_config, vision_language_model_path=args.vision_language_model_path)
     elif args.vision_model_path is not None and args.language_model_path is not None:
-        model = OracleModelForSequenceClassification(oracle_config, vision_model_path=args.vision_model_path, language_model_path=args.language_model_path)
+        model = eval(task_model_str)(oracle_config, vision_model_path=args.vision_model_path, language_model_path=args.language_model_path)
     else:
-        model = OracleModelForSequenceClassification(oracle_config)
+        model = eval(task_model_str)(oracle_config)
 
     if args.processor_name is not None:
         processor = AutoProcessor.from_pretrained(args.processor_name, use_fast=not args.use_slow_tokenizer)
     elif args.model_name_or_path is not None:
         processor = AutoFeatureExtractor.from_pretrained(args.model_name_or_path, use_fast=not args.use_slow_tokenizer)
-    elif args.vision_model_path is not None and args.language_model_path:
+    elif args.vision_language_model_path is not None:
+        processor = AutoProcessor.from_pretrained(args.vision_language_model_path, use_fast=not args.use_slow_tokenizer)
+    elif args.vision_model_path is not None and args.language_model_path is not None:
         tokenizer = AutoTokenizer.from_pretrained(args.language_model_path, use_fast=not args.use_slow_tokenizer)
         feature_extractor = AutoFeatureExtractor.from_pretrained(args.vision_model_path)
         processor = VisionTextDualEncoderProcessor(feature_extractor, tokenizer)
@@ -378,19 +415,17 @@ def main():
     calc_bbox_fn = functools.partial(calc_bbox, size=image_size)
 
     def encode(features):
-        features_tmp = processor(text=features["question"], images=[image.convert("RGB") for image in features["image"]], return_tensors="pt")
-        wh_l = [image.size for image in features["image"]]
-        bbox_l = [bbox for bbox in features["bbox"]]
-        
-        features_tmp["bbox"] = [calc_bbox_fn(wh, bbox) for wh, bbox in zip(wh_l, bbox_l)]
-        
-        for k in ["answer", "category"]:
+        features_tmp = processor(text=features["question"], images=features["image"], return_tensors="pt", padding=True, truncation=True)
+        # wh_l = [image.size for image in features["image"]]
+        # bbox_l = [bbox for bbox in features["bbox"]]
+        # features_tmp["bbox"] = [calc_bbox_fn(wh, bbox) for wh, bbox in zip(wh_l, bbox_l)]
+        for k in ["answer", "category", "bbox"]:
             features_tmp[k] = features[k]
         return features_tmp
 
+    # raw_datasets = raw_datasets.map(encode, writer_batch_size=32)
 
     raw_datasets.set_transform(encode)
-
     train_dataset = raw_datasets["train"]
     eval_dataset = raw_datasets["validation"]
     test_dataset = raw_datasets["test"]
@@ -402,14 +437,10 @@ def main():
 
     data_collator = DataCollatorWithPadding(processor.tokenizer, pad_to_multiple_of=(8 if accelerator.use_fp16 else None))
 
-
-    train_dataloader = DataLoader(train_dataset, collate_fn=data_collator, shuffle=True, batch_size=args.per_device_train_batch_size)
-    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
-    test_dataloader = DataLoader(test_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
+    train_dataloader = DataLoader(train_dataset, collate_fn=data_collator, shuffle=True, batch_size=args.per_device_train_batch_size, num_workers=args.preprocessing_num_workers)
+    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size, num_workers=args.preprocessing_num_workers)
+    test_dataloader = DataLoader(test_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size, num_workers=args.preprocessing_num_workers)
     
-
-    # Optimizer
-    # Split weights in two groups, one with weight decay and the other not.
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
         {
@@ -421,8 +452,8 @@ def main():
             "weight_decay": 0.0,
         },
     ]
-    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate * torch.cuda.device_count() * args.per_device_train_batch_size * args.gradient_accumulation_steps)
-    
+    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate * float(args.gradient_accumulation_steps))
+ 
     # scheduler
     overrode_max_train_steps = False
     num_update_steps_per_epoch = len(train_dataloader)
@@ -440,8 +471,6 @@ def main():
     )
 
     # Accelerator setting
-    device = accelerator.device
-    model.to(device)
     model, optimizer, train_dataloader, eval_dataloader, test_dataloader, scheduler = accelerator.prepare(
         model, optimizer, train_dataloader, eval_dataloader, test_dataloader, scheduler,
     )
@@ -478,7 +507,7 @@ def main():
     starting_epoch = 0
     completed_steps = 0
     metric = evaluate.load("accuracy")
-
+    class_metric = evaluate.load("accuracy")
     if args.resume_from_checkpoint:
         if args.resume_from_checkpoint is not None or args.resume_from_checkpoint != "":
             accelerator.print(f"Resumed from checkpoint: {args.resume_from_checkpoint}")
@@ -509,6 +538,7 @@ def main():
         model.train()
         if args.with_tracking:
             total_loss = 0
+            total_class_loss = 0
         for step, batch in enumerate(train_dataloader):
             with accelerator.accumulate(model):
                 # We need to skip steps until we reach the resumed step
@@ -519,13 +549,18 @@ def main():
                 """
                 input_ids, token_type_ids, attention_mask, pixel_values, answer, category, bbox
                 """
-                batch["labels"] = batch["answer"]
+                # in questioner, get logits and an image -> results output, but using guesser for generating logits 
+                batch["labels"] = batch["answer"] if 'Oracle' in args.task else batch["category"]
+                batch["pixel_values"] = batch["pixel_values"].type(torch.float16) if accelerator.use_fp16 else batch["pixel_values"]
+                batch["bbox"] = batch["bbox"].type(torch.float16) if accelerator.use_fp16 else batch["bbox"]
                 outputs = model(**batch)
                 loss = outputs.loss
                 # We keep track of the loss at each epoch
+                class_loss = outputs.class_loss if 'Oracle' in args.task else None
                 if args.with_tracking:
                     total_loss += loss.detach().float()
-
+                    total_class_loss = total_class_loss + class_loss.detach().float() if class_loss is not None else None
+                loss = loss + class_loss if class_loss is not None else loss
                 accelerator.backward(loss)
                 optimizer.step()
                 scheduler.step()
@@ -542,10 +577,17 @@ def main():
 
                 if completed_steps >= args.max_train_steps:
                     break
-                
-                if step % 100 == 0:
-                    print(f"loss: {loss}")
-            
+                if step % 100 == 0 and args.with_tracking:
+                    accelerator.log(
+                        {
+                            "train_answer_loss": loss.detach().float().item(),
+                            "train_class_loss": class_loss.detach().float().item() if class_loss is not None else None,
+                            "epoch": epoch,
+                            "step": epoch * num_update_steps_per_epoch + step,
+                        },
+                        step = epoch * num_update_steps_per_epoch + step,
+                    )
+
         model.eval()
         samples_seen = 0
         for step, batch in enumerate(eval_dataloader):
@@ -564,20 +606,35 @@ def main():
                 predictions=predictions,
                 references=references,
             )
-            if step >= 10:
-                break
+            if outputs.class_logits is not None:
+                predictions = outputs.class_logits.argmax(dim=-1)
+                predictions, references = accelerator.gather((predictions, batch["category"]))
+                # If we are in a multiprocess environment, the last batch has duplicates
+                if accelerator.num_processes > 1:
+                    if step == len(eval_dataloader) - 1:
+                        predictions = predictions[: len(eval_dataloader.dataset) - samples_seen]
+                        references = references[: len(eval_dataloader.dataset) - samples_seen]
+                    else:
+                        samples_seen += references.shape[0]
+                class_metric.add_batch(
+                    predictions=predictions,
+                    references=references,
+                )
         eval_metric = metric.compute()
-        logger.info(f"epoch {epoch}: {eval_metric}")
+        logger.info(f"epoch {epoch} accuracy: {eval_metric}")
+        if outputs.class_logits is not None:
+            class_eval_metric = class_metric.compute()
+            logger.info(f"epoch {epoch} class accuracy: {class_eval_metric}")
 
         if args.with_tracking:
             accelerator.log(
                 {
                     "accuracy": eval_metric,
-                    "train_loss": total_loss.item() / len(train_dataloader),
+                    "class_accuracy": class_eval_metric if outputs.class_logits is not None else None,
                     "epoch": epoch,
-                    "step": completed_steps,
+                    "step": epoch * num_update_steps_per_epoch + step,
                 },
-                step=completed_steps,
+                step= epoch * num_update_steps_per_epoch + step,
             )
 
         if epoch < args.num_train_epochs - 1:
@@ -594,6 +651,44 @@ def main():
             if args.output_dir is not None:
                 output_dir = os.path.join(args.output_dir, output_dir)
             accelerator.save_state(output_dir)
+
+    model.eval()
+    samples_seen = 0
+    for step, batch in enumerate(test_dataloader):
+        with torch.no_grad():
+            outputs = model(**batch)
+        predictions = outputs.logits.argmax(dim=-1)
+        predictions, references = accelerator.gather((predictions, batch["answer"]))
+        # If we are in a multiprocess environment, the last batch has duplicates
+        if accelerator.num_processes > 1:
+            if step == len(test_dataloader) - 1:
+                predictions = predictions[: len(test_dataloader.dataset) - samples_seen]
+                references = references[: len(test_dataloader.dataset) - samples_seen]
+            else:
+                samples_seen += references.shape[0]
+        metric.add_batch(
+            predictions=predictions,
+            references=references,
+        )
+        if outputs.class_logits is not None:
+            predictions = outputs.class_logits.argmax(dim=-1)
+            predictions, references = accelerator.gather((predictions, batch["category"]))
+            # If we are in a multiprocess environment, the last batch has duplicates
+            if accelerator.num_processes > 1:
+                if step == len(test_dataloader) - 1:
+                    predictions = predictions[: len(test_dataloader.dataset) - samples_seen]
+                    references = references[: len(test_dataloader.dataset) - samples_seen]
+                else:
+                    samples_seen += references.shape[0]
+            class_metric.add_batch(
+                predictions=predictions,
+                references=references,
+            )
+    eval_metric = metric.compute()
+    logger.info(f"epoch {epoch} accuracy: {eval_metric}")
+    if outputs.class_logits is not None:
+        class_eval_metric = class_metric.compute()
+        logger.info(f"epoch {epoch} class accuracy: {class_eval_metric}")
 
     if args.with_tracking:
         accelerator.end_training()
